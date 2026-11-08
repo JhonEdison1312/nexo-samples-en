@@ -1,0 +1,42 @@
+=== 01-RLS-PGBOUNCER VERIFICATION DEMO ===
+Connected through PgBouncer: 127.0.0.1:16432 as role 'nexo_app'
+
+--- TEST 0: Verify current_user is NOSUPERUSER app role ---
+current_user: nexo_app
+is_superuser: f
+  [PASS] current_user is nexo_app
+  [PASS] user is NOT superuser
+
+--- TEST 1: Session-Level Setting Leaks Across Connections (The Vulnerability) ---
+Client A sets app.current_school_id at session level (without transaction scope):
+Client A session setting complete.
+Client B opens a new connection to PgBouncer and inspects app.current_school_id:
+Client B observed GUC: 11111111-1111-1111-1111-111111111111
+  [PASS] session-level GUC leaks across pooled connections
+
+--- TEST 2: Transaction-Scoped set_config(..., true) / SET LOCAL (The Safe Pattern) ---
+Client A sets app.current_school_id inside a BEGIN/COMMIT block with is_local=true:
+Client A transaction committed.
+Client B opens a new connection to PgBouncer and inspects app.current_school_id:
+Client B observed GUC: <empty>
+  [PASS] transaction-scoped GUC does NOT leak
+
+--- TEST 3: Row-Level Security Tenant Isolation ---
+Query 3a: Read with no context set:
+Visible rows: 0
+  [PASS] no-context read returns 0 rows (RLS default-deny)
+Query 3b: Read with School A context ('11111111-1111-1111-1111-111111111111'):
+11111111-1111-1111-1111-111111111111 | Alice Smith
+11111111-1111-1111-1111-111111111111 | Bob Jones
+Query 3c: Attempt cross-tenant read (querying School B while scoped to School A):
+Cross-tenant rows returned: 0
+  [PASS] cross-tenant read returns 0 rows
+Query 3d: Read with School B context ('22222222-2222-2222-2222-222222222222'):
+22222222-2222-2222-2222-222222222222 | Charlie Brown
+22222222-2222-2222-2222-222222222222 | Diana Prince
+
+--- TEST 4: Empty GUC After COMMIT (Same Connection) ---
+11111111-1111-1111-1111-111111111111
+GUC value after COMMIT: <empty>
+
+=== 01-RLS-PGBOUNCER DEMO COMPLETE: ALL CHECKS PASSED ===

@@ -1,0 +1,43 @@
+=== 04-NODUS-PARSER VERIFICATION DEMO ===
+
+--- TEST 1: Intent Classification & Strict Entity Validation ---
+Query: "¿Cómo está la asistencia del grupo 10-A hoy?"
+Domain: formal
+Intent: attendance_today
+Confidence: 0.95
+Extracted Group: 10-A
+Result: INTENT CLASSIFICATION PASS
+
+--- TEST 2: Malicious Injection & Scope Escalation Defense ---
+Adversarial Query: "drop_tables with group ALL"
+Coerced Intent: out_of_scope (unlisted intents forced to out_of_scope)
+Wildcard Scope 'ALL': STRIPPED BY ALLOWLIST
+Result: ADVERSARIAL INJECTION SUCCESSFULLY BLOCKED
+
+--- TEST 3: Parse -> Plan -> RBAC -> Read-Only SQL Execution ---
+1. Parse: Input text parsed to intent: attendance_today, entity: group=10-A
+2. Plan: Capability=attendance.summary, Action=count (SIMULATED)
+3. RBAC Check: Role=TEACHER authorized for attendance.summary: ALLOWED (SIMULATED)
+4. Read-Only SQL: SELECT '10-A' AS group_name, 28 AS present, 2 AS absent (SIMULATED)
+Database Result: present=28, absent=2 (SIMULATED)
+Verified Deterministic Reply: "El grupo 10-A registra 28 estudiantes presentes y 2 ausencias hoy."
+
+--- TEST 4: Post-Generation Hallucination Guard (nxLlmComposeGuard) ---
+4a. Composition with accurate numbers:
+    Text: "El grupo 10-A registra 28 estudiantes presentes y 2 ausencias el día de hoy."
+    Guard: PASS (Accepted)
+4b. Hallucinated number inflation:
+    Text: "El grupo 10-A tiene 50 presentes y 10 ausencias."
+    Guard: PASS (Successfully Blocked)
+4c. False data denial when rows > 0:
+    Text: "No se encontraron registros de asistencia para este grupo."
+    Guard: PASS (Successfully Blocked)
+4d. Fabricated technical excuse ("falló la red"):
+    Text: "El grupo tiene 28 presentes pero falló la red del colegio."
+    Guard: PASS (Successfully Blocked)
+
+--- TEST 5: Safe Degradation When LLM Is Unavailable ---
+LLM Disabled: nxLlmClassify returned null (degrades safely to deterministic templates)
+Fallback result: SAFE DEGRADATION OK
+
+=== 04-NODUS-PARSER DEMO COMPLETE: ALL CHECKS PASSED ===

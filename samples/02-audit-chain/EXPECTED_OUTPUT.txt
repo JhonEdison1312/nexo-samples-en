@@ -1,0 +1,24 @@
+=== 02-AUDIT-CHAIN VERIFICATION DEMO ===
+Target: nexo as nexo_app
+
+--- TEST 1: Valid Sequential Chain Generation ---
+Inserted 5 sequential audit events.
+Validation Result: {"status": "ok", "school_id": null, "total_records": 5}
+  [PASS] TEST 1 valid chain: status=ok
+
+--- TEST 2: Detect Middle Record Tampering ---
+Modified payload of middle event ('ATTENDANCE_OVERRIDE') directly in database.
+Validation Result: {"status": "compromised", "valid_up_to": 1, "total_checked": 3, "broken_at_audit_id": "<UUID>"}
+  [PASS] TEST 2 middle tamper: status=compromised
+
+--- TEST 3: Detect Record Deletion ---
+Deleted event #3 ('ATTENDANCE_OVERRIDE') from sequence.
+Validation Result: {"status": "compromised", "valid_up_to": 1, "total_checked": 3, "broken_at_audit_id": "<UUID>"}
+  [PASS] TEST 3 deletion: status=compromised
+
+--- TEST 4: Detect Record Reordering ---
+Moved event #1 ('AUTH_LOGIN') timestamp past event #5, disrupting chain sequence.
+Validation Result: {"status": "compromised", "valid_up_to": -1, "total_checked": 1, "broken_at_audit_id": "<UUID>"}
+  [PASS] TEST 4 reorder: status=compromised
+
+=== 02-AUDIT-CHAIN DEMO COMPLETE: ALL CHECKS PASSED ===

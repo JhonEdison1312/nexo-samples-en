@@ -1,0 +1,40 @@
+# ADDED FOR THIS SAMPLE
+name: nexo-s01
+services:
+  postgres:
+    image: postgres:15.10-alpine@sha256:a58cec2ba7a60b4c08d51f2ca93c1ad65fbf96e75cf0c89b7c0d2684860d3bb3
+    container_name: nexo-s01-postgres
+    environment:
+      POSTGRES_DB: nexo
+      POSTGRES_USER: nexo_admin
+      POSTGRES_PASSWORD: nexo_admin_secret
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "15431:5432"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/01_init.sql:z
+      - ../src/rls_policies.sql:/docker-entrypoint-initdb.d/02_rls_policies.sql:z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexo_admin -d nexo"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.23.1-p3@sha256:377dec3c0e4a66a1077ec043e16a26ed5702a6d954011a7983a1457c2e070b1d
+    container_name: nexo-s01-pgbouncer
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: nexo_app
+      DB_PASSWORD: nexo_secret
+      DB_NAME: nexo
+      POOL_MODE: transaction
+      DEFAULT_POOL_SIZE: 1
+      MAX_CLIENT_CONN: 50
+      AUTH_TYPE: trust
+    ports:
+      - "16431:5432"
+    depends_on:
+      postgres:
+        condition: service_healthy

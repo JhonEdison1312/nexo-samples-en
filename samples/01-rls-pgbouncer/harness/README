@@ -1,0 +1,26 @@
+# RLS + PgBouncer Harness
+
+## Status
+VERIFIED — docker route passes `test_pgbouncer_leak.sh` twice (2026-11-07).
+
+## Author Local Commands
+Native user-space route (no Docker needed):
+```bash
+cd /path/to/repo
+tools/env/up.sh
+make test-01
+```
+
+Docker route (isolated project `nexo-s01`, ports 15431/16431 — distinct
+from the native env's 15432/16432):
+```bash
+cd samples/01-rls-pgbouncer/harness
+docker compose up -d
+NEXO_PGBOUNCER_PORT=16431 bash test_pgbouncer_leak.sh
+docker compose down -v
+```
+
+## What it tests
+1. Session-level setting leaking between PgBouncer connections
+2. SET LOCAL preventing the leak with transaction pooling
+3. RLS default-deny with no tenant context and cross-tenant reads

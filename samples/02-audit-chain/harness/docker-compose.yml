@@ -1,0 +1,21 @@
+# ADDED FOR THIS SAMPLE
+name: nexo-s02
+services:
+  postgres:
+    image: postgres:15.10-alpine@sha256:a58cec2ba7a60b4c08d51f2ca93c1ad65fbf96e75cf0c89b7c0d2684860d3bb3
+    container_name: nexo-s02-postgres
+    environment:
+      POSTGRES_DB: nexo
+      POSTGRES_USER: nexo_admin
+      POSTGRES_PASSWORD: nexo_admin_secret
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "15433:5432"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/01_init.sql:z
+      - ../src/audit_chain_trigger.sql:/docker-entrypoint-initdb.d/02_trigger.sql:z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexo_admin -d nexo"]
+      interval: 3s
+      timeout: 3s
+      retries: 5

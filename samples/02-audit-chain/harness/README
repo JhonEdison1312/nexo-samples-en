@@ -1,0 +1,27 @@
+# Audit Chain Harness
+
+## Status
+VERIFIED — docker route passes `test_tampering.sh` twice (2026-11-07).
+
+## Author Local Commands
+Native user-space route (no Docker needed):
+```bash
+cd /path/to/repo
+tools/env/up.sh
+make test-02
+```
+
+Docker route (isolated project `nexo-s02`, port 15433 — distinct from the
+native env's 15432):
+```bash
+cd samples/02-audit-chain/harness
+docker compose up -d
+NEXO_PG_PORT=15433 NEXO_SOCKET_DIR=/nonexistent bash test_tampering.sh
+docker compose down -v
+```
+
+## What it tests
+1. Valid HMAC chain verifies as `status: ok`
+2. Middle-record tampering detected (`status: compromised`)
+3. Record deletion detected
+4. Record reordering detected

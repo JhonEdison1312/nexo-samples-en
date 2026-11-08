@@ -1,0 +1,26 @@
+# ADDED FOR THIS SAMPLE
+# Allowlist for Spanish text in NEXO samples.
+# Format: path_glob | pattern_or_* | reason
+#
+# Policy: English everywhere EXCEPT (a) functional Spanish in sample 04
+# (R4 exception — the product is a Spanish-language school assistant),
+# (b) real database schema identifiers that are ORIGIN-verbatim and cannot
+# be translated without breaking provenance, (c) the detector tools
+# themselves which contain the patterns they search for.
+
+# (a) Sample 04 — Nodus parser: FUNCTIONAL Spanish (R4 exception)
+samples/04-nodus-parser/src/nexus_llm.php | * | LLM system prompts, classification rules, guard regexes and reply templates are functional Spanish — the product is a Spanish-language school assistant; translating them would change behavior. Declared in the sample README.
+samples/04-nodus-parser/harness/test_parser.php | * | Test fixtures quoting the functional Spanish inputs/outputs of sample 04.
+samples/04-nodus-parser/harness/mock_llm_server.php | * | Mock LLM replies in functional Spanish (sample 04 demo data).
+samples/04-nodus-parser/EXPECTED_OUTPUT.txt | * | Recorded demo output containing functional Spanish replies (sample 04).
+
+# (b) Real schema identifiers — ORIGIN-verbatim table/column names inside
+# SQL literals; renaming them would falsify provenance and change the schema.
+samples/03-edge-pipeline/src/sqlite_manager.cpp | estudiantes | Real ORIGIN table name inside the SQL DDL literal (cannot be translated).
+samples/03-edge-pipeline/src/include/base_de_datos/sqlite_manager.h | estudiantes | Docblock documents the real ORIGIN table/column identifiers.
+
+# (c) The detectors themselves contain the Spanish patterns they search for
+tools/lang_check.py | * | Contains the Spanish word/regex lists it detects.
+tools/docs_lint.py | * | Contains the accent regex used for linting.
+tools/mutation_tests.py | * | Fixture quotes ORIGIN-verbatim SQL literal text to test declared substitutions.
+docs/SUBSTITUTIONS.md | * | Generated provenance record: the 'before' column quotes ORIGIN source text verbatim (Spanish patterns by design); replacements are English. Excluded from the lang scan via SCAN_EXCLUDE as well.

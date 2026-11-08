@@ -1,0 +1,24 @@
+=== T1: Reliable LMOVE — job moves from ingest to processing atomically ===
+[PASS] ingest queue empty after pop
+[PASS] processing queue has 1 item
+[PASS] job action intact
+[PASS] processing_since injected
+[PASS] processing empty after ack
+
+=== T2: GC zombie recovery — stale processing job re-enqueued ===
+[PASS] zombie is in processing before GC
+[PASS] ingest empty before GC
+[PASS] GC recovered 1 zombie
+[PASS] processing empty after GC
+[PASS] ingest has recovered job
+
+=== T3: DLQ promotion — job exceeding retry limit moved to DLQ ===
+[PASS] ingest empty after all retries
+[PASS] DLQ has 1 failed job
+[PASS] DLQ job retries == 4
+[PASS] DLQ job action intact
+
+=== Summary ===
+Tests PASSED: 14
+Tests FAILED: 0
+All queue invariant tests PASSED.

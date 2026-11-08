@@ -1,0 +1,16 @@
+# ADDED FOR THIS SAMPLE
+_internal/
+*.log
+.env
+.env.local
+*.bak
+*.tmp
+*.o
+*.db
+edge_demo
+.DS_Store
+__pycache__/
+*.pyc
+edge_demo
+repomix.md
+repomix*

@@ -1,0 +1,1557 @@
+{
+  "origin": {
+    "path": "ORIGIN",
+    "commit": "26e06b242600986e6b379ccc2293a1f5dc928c5b"
+  },
+  "samples": {
+    "01-rls-pgbouncer": {
+      "extracts": [
+        {
+          "origin_file": "backend/api/routes/_auth_middleware.php",
+          "line_range": [
+            665,
+            725
+          ],
+          "output_file": "auth_middleware.php",
+          "language": "php",
+          "substitutions": [
+            {
+              "pattern": "Usuario no encontrado o inactivo",
+              "replacement": "User not found or inactive",
+              "expected_count": 1,
+              "scope": "literal"
+            }
+          ],
+          "sha256": "99ab031c50fab9e8ece6b05dad2c2ffc4e23699350278cf11d8de5377041c783",
+          "normalized_sha256": "6ba747e654228c77b02a34b443ca6256dcfe23bf4e5486925a16f1f2c3aff95b",
+          "comment_translations": [
+            {
+              "from": "// no persiste entre consultas. Usamos beginTransaction() + SET LOCAL",
+              "to": "// does not persist between queries. We use beginTransaction() + SET LOCAL"
+            },
+            {
+              "from": "// SEC-2: huevo-y-gallina bajo RLS \u2014 el lookup del usuario ya est\u00e1",
+              "to": "// SEC-2: chicken-and-egg under RLS \u2014 the user lookup is already"
+            },
+            {
+              "from": "// aislado por colegio, as\u00ed que el contexto se fija ANTES desde los",
+              "to": "// isolated by school, so context is set BEFORE from the"
+            },
+            {
+              "from": "// claims del JWT (firmado por el servidor) y se RE-fija despu\u00e9s",
+              "to": "// JWT claims (server-signed) and RE-set afterwards"
+            },
+            {
+              "from": "// desde la fila de BD (autoridad final si el usuario cambi\u00f3 de",
+              "to": "// from the DB row (final authority if the user changed"
+            },
+            {
+              "from": "// colegio/rol desde que se emiti\u00f3 el token).",
+              "to": "// school/role since the token was issued)."
+            },
+            {
+              "from": "// Re-fijar contexto desde la fila de BD (autoridad \u2014 el JWT puede",
+              "to": "// Re-set context from the DB row (authority \u2014 the JWT may"
+            },
+            {
+              "from": "// ser anterior a un cambio de colegio o de rol).",
+              "to": "// predate a school or role change)."
+            },
+            {
+              "from": "// La cadena de auditor\u00eda exige esta GUC por-tx: el pooler de",
+              "to": "// The audit chain requires this per-tx GUC: the"
+            },
+            {
+              "from": "// Supabase (transaction mode) descarta las de sesi\u00f3n.",
+              "to": "// Supabase pooler (transaction mode) discards session-level ones."
+            },
+            {
+              "from": "// (equivalente a set_config(..., true)) para que RLS funcione.",
+              "to": "// (equivalent to set_config(..., true)) so RLS works."
+            },
+            {
+              "from": "// SET LOCAL con exec() evita problemas con EMULATE_PREPARES.",
+              "to": "// SET LOCAL via exec() avoids EMULATE_PREPARES issues."
+            }
+          ]
+        },
+        {
+          "origin_file": "sql/schema.sql",
+          "line_range": [
+            2282,
+            2294
+          ],
+          "output_file": "rls_policies.sql",
+          "language": "sql",
+          "substitutions": [],
+          "sha256": "9cc46c7029513d1832283e79a8425f3bf461cf0e9ad1a26ab76794b2a2191116",
+          "normalized_sha256": "4d70d38876092b56804df5fd3b16f81ff163f00cac27288ebcc90d35669d2aa3",
+          "comment_translations": []
+        }
+      ]
+    },
+    "02-audit-chain": {
+      "extracts": [
+        {
+          "origin_file": "backend/api/workers/worker_audit.php",
+          "line_range": [
+            70,
+            189
+          ],
+          "output_file": "worker_audit.php",
+          "language": "php",
+          "substitutions": [
+            {
+              "pattern": "APP_NEXO_HMAC_SECRET no configurada o es default. Worker no puede iniciar.",
+              "replacement": "APP_NEXO_HMAC_SECRET is not configured or is the default. Worker cannot start.",
+              "expected_count": 1,
+              "scope": "literal"
+            }
+          ],
+          "sha256": "06e9741417359d35422803c4bce13ae3a3d99a1871282ec6aa2819b2e363eb85",
+          "normalized_sha256": "bf81b2e29e07cba6da24085b7c0d5fe6d4edbe4aa9766138a1e804d658a8c20f",
+          "comment_translations": [
+            {
+              "from": "/**\n * Calcula el HMAC-SHA256 que enlaza un log con el anterior en la cadena.\n *\n * @param string|null $prevHash Hash del registro previo.\n * @param string|null $schoolId UUID de la escuela.\n * @param string|null $actorId UUID del actor.\n * @param string $eventType Tipo de evento.\n * @param string $description Descripci\u00f3n.\n * @param string $ipAddress Direcci\u00f3n IP.\n * @param string $createdAt Timestamp.\n * @param string $secret Secreto HMAC.\n * @return string Hash HMAC-SHA256.\n */",
+              "to": "/**\n * Calculates HMAC-SHA256 linking a log with the previous record in the chain.\n *\n * @param string|null $prevHash Hash of previous record.\n * @param string|null $schoolId UUID of school.\n * @param string|null $actorId UUID of actor.\n * @param string $eventType Event type.\n * @param string $description Description.\n * @param string $ipAddress IP address.\n * @param string $createdAt Timestamp.\n * @param string $secret HMAC secret.\n * @return string HMAC-SHA256 hash.\n */"
+            },
+            {
+              "from": "/**\n * Inserta un lote de logs de auditor\u00eda en una transacci\u00f3n manteniendo la cadena de hashes.\n *\n * @param PDO $conn Conexi\u00f3n PDO.\n * @param array $rows Filas decodificadas de Redis.\n * @return void\n *\n * Efectos secundarios: inicia y confirma/ revierte una transacci\u00f3n; en error\n * reencola las filas fallidas en `queue:audit_logs`.\n */",
+              "to": "/**\n * Inserts a batch of audit logs in a transaction maintaining the hash chain.\n *\n * @param PDO $conn PDO connection.\n * @param array $rows Rows decoded from Redis.\n * @return void\n *\n * Side effects: starts and commits/rolls back a transaction; on error\n * re-enqueues failed rows to `queue:audit_logs`.\n */"
+            },
+            {
+              "from": "// Cache en memoria para el batch",
+              "to": "// In-memory cache for the batch"
+            },
+            {
+              "from": "// El trigger de la cadena exige la GUC dentro de la tx (Supavisor",
+              "to": "// The chain trigger requires the GUC inside the tx (Supavisor"
+            },
+            {
+              "from": "// transaction mode descarta las de sesi\u00f3n).",
+              "to": "// transaction mode discards session-level ones)."
+            },
+            {
+              "from": "// RLS: gal_insert/gal_select exigen school_id = contexto \u2014 fijarlo",
+              "to": "// RLS: gal_insert/gal_select require school_id = context \u2014 set it"
+            },
+            {
+              "from": "// por colegio dentro de la tx (set_config true \u2261 SET LOCAL).",
+              "to": "// by school within the tx (set_config true \u2261 SET LOCAL)."
+            },
+            {
+              "from": "// El rol permite insertar eventos de sistema sin colegio",
+              "to": "// The role allows inserting system events without school"
+            },
+            {
+              "from": "// (pre-auth: LOGIN_*, etc.); el school_id delimita lo le\u00edble.",
+              "to": "// (pre-auth: LOGIN_*, etc.); school_id delimits what is readable."
+            },
+            {
+              "from": "// Actualizar la cach\u00e9 del lote para el siguiente registro",
+              "to": "// Update the batch cache for the next record"
+            }
+          ]
+        },
+        {
+          "origin_file": "sql/schema.sql",
+          "line_range": [
+            1362,
+            1456
+          ],
+          "output_file": "audit_chain_trigger.sql",
+          "language": "sql",
+          "substitutions": [
+            {
+              "pattern": "app.nexo_hmac_secret no configurado. Abortando para prevenir compromiso de cadena de auditor\u00eda.",
+              "replacement": "app.nexo_hmac_secret is not configured. Aborting to prevent audit chain compromise.",
+              "expected_count": 1,
+              "scope": "literal"
+            }
+          ],
+          "sha256": "0bff608df7754d373751005504754a9de1b125ab5633357c3690fb1989f7d5a5",
+          "normalized_sha256": "e957b5b8480579a9fdbfa48ee9ae87555f32470b3838306b9684b678475f0267",
+          "comment_translations": [
+            {
+              "from": "-- Audit chain: HMAC-SHA256 hash function (VF-003: sin fallback a default)",
+              "to": "-- Audit chain: HMAC-SHA256 hash function (VF-003: no fallback to default)"
+            }
+          ]
+        }
+      ]
+    },
+    "03-edge-pipeline": {
+      "extracts": [
+        {
+          "origin_file": "backend/edge/include/hal/IBiometricSensor.h",
+          "line_range": [
+            1,
+            56
+          ],
+          "output_file": "include/hal/IBiometricSensor.h",
+          "language": "cpp",
+          "substitutions": [],
+          "sha256": "8fb9910883ba017132414c17349c891f4b8016a122a6adfe57453ecc842b5e90",
+          "normalized_sha256": "14689250d8200a1fd621aa2379857c455cf20ce07d230241ac3644a55a67790c",
+          "comment_translations": [
+            {
+              "from": "/**\n * =============================================================================\n * IBiometricSensor.h \u2014 Interfaz abstracta del sensor biom\u00e9trico.\n * =============================================================================\n * RESPONSABILIDAD:\n *   Define el contrato que cualquier sensor biom\u00e9trico (real o stub) debe\n *   cumplir: inicializaci\u00f3n, enrolamiento, b\u00fasqueda 1:N, eliminaci\u00f3n de usuario\n *   y consulta de estado. Permite inyectar implementaciones DevStub o ZK9500\n *   sin modificar main.cpp.\n *\n * FLUJO:\n *   initialize() -> isReady()\n *        \u2502\n *        \u251c\u2500\u2500 enrollUser(userId, templateOut) -> guardar template cifrado\n *        \u2514\u2500\u2500 searchUser(templateData, matchedUserId, matchScore) -> identificar\n *\n * IMPLEMENTACIONES:\n *   - hardware/dev_stub/DevStubBiometricSensor : simulaci\u00f3n sin hardware.\n *   - hardware/real/Zk9500BiometricSensor      : sensor ZKTeco ZK9500.\n */",
+              "to": "/**\n * =============================================================================\n * IBiometricSensor.h \u2014 Abstract interface for the biometric sensor.\n * =============================================================================\n * RESPONSIBILITY:\n *   Defines the contract any biometric sensor (real or stub) must fulfill:\n *   initialization, enrollment, 1:N search, user deletion and status query.\n *   Allows injecting DevStub or ZK9500 implementations without touching main.cpp.\n *\n * FLOW:\n *   initialize() -> isReady()\n *        \u2502\n *        \u251c\u2500\u2500 enrollUser(userId, templateOut) -> store encrypted template\n *        \u2514\u2500\u2500 searchUser(templateData, matchedUserId, matchScore) -> identify\n *\n * IMPLEMENTATIONS:\n *   - hardware/dev_stub/DevStubBiometricSensor : simulation without hardware.\n *   - hardware/real/Zk9500BiometricSensor      : ZKTeco ZK9500 sensor.\n */"
+            },
+            {
+              "from": "// A\u00f1ade un template ya generado al cache del sensor. Permite enrolamiento at\u00f3mico:",
+              "to": "// Adds an already-generated template to the sensor cache. Enables atomic enrollment:"
+            },
+            {
+              "from": "// SQLite primero, cache despu\u00e9s. Implementaci\u00f3n por defecto no-op para stubs.",
+              "to": "// SQLite first, cache second. Default no-op implementation for stubs."
+            },
+            {
+              "from": "// Cancela una captura bloqueante (p. ej. dpfpdd_cancel). No-op por defecto.",
+              "to": "// Cancels a blocking capture (e.g. dpfpdd_cancel). No-op by default."
+            }
+          ]
+        },
+        {
+          "origin_file": "backend/edge/src/hardware/dev_stub/DevStubBiometricSensor.cpp",
+          "line_range": [
+            1,
+            54
+          ],
+          "output_file": "DevStubBiometricSensor.cpp",
+          "language": "cpp",
+          "substitutions": [],
+          "sha256": "b8683a9b5ef6a9a7a6c5ab322648d4e227f78af7fa8e6ff6c1b572a693d43e06",
+          "normalized_sha256": "91a6d39264eb0418f6fecb4d8b88fcb23b7afb34baa608c25e35598fa8b87730",
+          "comment_translations": [
+            {
+              "from": "/**\n * =============================================================================\n * DevStubBiometricSensor.cpp \u2014 Implementaci\u00f3n stub del sensor biom\u00e9trico.\n * =============================================================================\n * RESPONSABILIDAD:\n *   Simula un sensor biom\u00e9trico para pruebas sin hardware. Inicializaci\u00f3n\n *   inmediata, enrolamiento devuelve template dummy, b\u00fasqueda simula un match\n *   cada 5 intentos con delay de 500 ms.\n */",
+              "to": "/**\n * =============================================================================\n * DevStubBiometricSensor.cpp \u2014 Stub implementation of the biometric sensor.\n * =============================================================================\n * RESPONSIBILITY:\n *   Simulates a biometric sensor for hardware-free testing. Immediate\n *   initialization, enrollment returns a dummy template, search simulates a\n *   match every 5 attempts with a 500 ms delay.\n */"
+            },
+            {
+              "from": "// Simulate that no fingerprint is present most of the time (1 match out of 5 attempts)",
+              "to": "// Simulate that no fingerprint is present most of the time (1 match out of 5 attempts)"
+            }
+          ]
+        },
+        {
+          "origin_file": "backend/edge/src/base_de_datos/sqlite_manager.cpp",
+          "line_range": [
+            1,
+            723
+          ],
+          "output_file": "sqlite_manager.cpp",
+          "language": "cpp",
+          "substitutions": [
+            {
+              "pattern": "-- \u0054ODO: evaluar si tabla patrones se usa, candidato a eliminar",
+              "replacement": "-- NOTE: evaluate whether the patrones table is used, candidate for removal",
+              "expected_count": 1,
+              "scope": "literal"
+            },
+            {
+              "pattern": "-- PAE (Programa de Alimentacion Escolar) eliminado por decision de arquitectura",
+              "replacement": "-- PAE (school meal program) removed by architecture decision",
+              "expected_count": 1,
+              "scope": "literal"
+            },
+            {
+              "pattern": "-- Multi-huella \u2014 hasta 2 dedos por estudiante. estudiantes.huella_id",
+              "replacement": "-- Multi-fingerprint \u2014 up to 2 fingers per student. estudiantes.huella_id",
+              "expected_count": 1,
+              "scope": "literal"
+            },
+            {
+              "pattern": "-- se mantiene como compat (dedo 1); estudiante_huellas es la fuente normalizada.",
+              "replacement": "-- is kept for compatibility (finger 1); estudiante_huellas is the normalized source.",
+              "expected_count": 1,
+              "scope": "literal"
+            },
+            {
+              "pattern": "encField: cifrado fall\u00f3 \u2014 guardando en claro (degradado)",
+              "replacement": "encField: encryption failed \u2014 storing plaintext (degraded)",
+              "expected_count": 1,
+              "scope": "literal"
+            },
+            {
+              "pattern": "decField: decrypt fall\u00f3 \u2014 devolviendo valor crudo (no p\u00e9rdida)",
+              "replacement": "decField: decrypt failed \u2014 returning raw value (no loss)",
+              "expected_count": 1,
+              "scope": "literal"
+            }
+          ],
+          "sha256": "d80cab81b8dd8e1b8351154a6b4ea426522afbe3ca362d68ff57de797ad15f57",
+          "normalized_sha256": "8f2ce95c7787c4a42790d360405a371d171cb28946f5007b7c5580572f8ea804",
+          "comment_translations": [
+            {
+              "from": "/**\n * =============================================================================\n * sqlite_manager.cpp \u2014 Implementaci\u00f3n de la base de datos local SQLite.\n * =============================================================================\n * RESPONSABILIDAD:\n *   Abre/crea la base de datos local del edge, maneja corrupci\u00f3n renombrando a\n *   .bak, aplica pragmas WAL/synchronous/foreign_keys y crea tablas. Expone\n *   CRUD de estudiantes, patrones de asistencia, inasistencias (legacy), y\n *   audit_trail para sincronizaci\u00f3n con la nube. Los templates se cifran con\n *   Encryption usando un IV aleatorio de 12 bytes.\n *\n * SECCIONES:\n *   1. initialize/close/factoryReset/createTables\n *   2. executeWithRetry() \u2014 manejo SQLITE_BUSY/LOCKED con backoff exponencial\n *   3. Estudiantes (save, get, delete, nextHuellaID)\n *   4. Patrones de asistencia\n *   5. Auditor\u00eda pendiente (save, getPending, clear, attempts, error)\n *   6. Funciones legacy/config (stubs)\n */",
+              "to": "/**\n * =============================================================================\n * sqlite_manager.cpp \u2014 SQLite local database implementation.\n * =============================================================================\n * RESPONSIBILITY:\n *   Opens/creates the edge local database, handles corruption by renaming to\n *   .bak, applies WAL/synchronous/foreign_keys pragmas and creates tables. Exposes\n *   CRUD for students, attendance patterns, absences (legacy), and\n *   audit_trail for cloud sync. Templates are encrypted with\n *   Encryption using a 12-byte random IV.\n *\n * SECTIONS:\n *   1. initialize/close/factoryReset/createTables\n *   2. executeWithRetry() \u2014 SQLITE_BUSY/LOCKED handling with exponential backoff\n *   3. Students (save, get, delete, nextHuellaID)\n *   4. Attendance patterns\n *   5. Pending audit (save, getPending, clear, attempts, error)\n *   6. Legacy/config functions (stubs)\n */"
+            },
+            {
+              "from": "// Declaraciones anticipadas \u2014 helpers de cifrado/retry definidos m\u00e1s abajo.",
+              "to": "// Forward declarations \u2014 encryption/retry helpers defined below."
+            },
+            {
+              "from": "// Si es base de datos corrupta, renombrar y recrear",
+              "to": "// If database is corrupt, rename and recreate"
+            },
+            {
+              "from": "// Migraci\u00f3n para bases de datos existentes (agrega school_id si no existe)",
+              "to": "// Migration for existing databases (adds school_id if missing)"
+            },
+            {
+              "from": "// ALTER TABLE para bases de datos existentes que no tienen school_id",
+              "to": "// ALTER TABLE for existing databases that lack school_id"
+            },
+            {
+              "from": "// Si la columna ya existe, SQLite retorna error (SQLITE_ERROR) \u2014 lo ignoramos",
+              "to": "// If the column already exists, SQLite returns an error (SQLITE_ERROR) \u2014 we ignore it"
+            },
+            {
+              "from": "// Migraci\u00f3n de documentos en claro \u2192 clave seudonimizada + valor",
+              "to": "// Migration of plaintext documents -> pseudonymized key +"
+            },
+            {
+              "from": "// cifrado. Solo corre cuando hay clave provisionada (keyedHash no vac\u00edo);",
+              "to": "// encrypted value. Only runs when a key is provisioned (keyedHash non-empty);"
+            },
+            {
+              "from": "// idempotente: los documentos ya derivados tienen 64 hex y se saltan.",
+              "to": "// idempotent: already-derived documents are 64-hex and are skipped."
+            },
+            {
+              "from": "// decField: si el valor no lleva prefijo \u2192 se trata como plaintext legacy",
+              "to": "// decField: if the value has no prefix -> treated as legacy plaintext"
+            },
+            {
+              "from": "// (migraci\u00f3n gradual de bases existentes).",
+              "to": "// (gradual migration of existing databases)."
+            },
+            {
+              "from": "// \u2500\u2500 Clave de b\u00fasqueda seudonimizada para `documento` \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+              "to": "// \u2500\u2500 Pseudonymized search key for `documento` \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
+            },
+            {
+              "from": "// El documento en reposo ya no es legible: todas las tablas guardan",
+              "to": "// The document at rest is no longer readable: all tables store"
+            },
+            {
+              "from": "// docKey = HMAC-SHA256(documento) (64 hex, determin\u00edstico \u2192 PK/join intactos)",
+              "to": "// docKey = HMAC-SHA256(documento) (64 hex, deterministic -> PK/join intact)"
+            },
+            {
+              "from": "// y el valor real queda en estudiantes.documento_enc (AES-GCM). Sin clave",
+              "to": "// and the real value stays in estudiantes.documento_enc (AES-GCM). With no key"
+            },
+            {
+              "from": "// true si el valor ya es una clave derivada (64 hex), no un documento en claro",
+              "to": "// true if the value is already a derived key (64 hex), not a plaintext document"
+            },
+            {
+              "from": "// La PK es la clave seudonimizada (HMAC); el documento real va cifrado",
+              "to": "// The PK is the pseudonymized key (HMAC); the real document is stored encrypted"
+            },
+            {
+              "from": "// PII cifrada en reposo (nombre/tel\u00e9fonos/documento).",
+              "to": "// PII encrypted at rest (name/phones/document)."
+            },
+            {
+              "from": "// Si RAND_bytes falla, NO continuar con IV no inicializado \u2014 retornar error inmediatamente",
+              "to": "// If RAND_bytes fails, do NOT continue with an uninitialized IV \u2014 return error immediately"
+            },
+            {
+              "from": "// school_id: multi-tenancy (NULL si no est\u00e1 definido)",
+              "to": "// school_id: multi-tenancy (NULL if not set)"
+            },
+            {
+              "from": "// doc puede ser el documento real (se deriva a clave) o la clave",
+              "to": "// doc may be the real document (derived to key) or the stored"
+            },
+            {
+              "from": "// almacenada (viene de estudiante_huellas) \u2014 no se re-deriva. El OR con el",
+              "to": "// key (comes from estudiante_huellas) \u2014 it is not re-derived. The OR with the"
+            },
+            {
+              "from": "// valor crudo cubre filas legacy en claro no migradas a\u00fan.",
+              "to": "// raw value covers legacy plaintext rows not yet migrated."
+            },
+            {
+              "from": "// documento real = documento_enc descifrado; si est\u00e1 vac\u00edo (fila legacy",
+              "to": "// real document = decrypted documento_enc; if empty (legacy row"
+            },
+            {
+              "from": "// en claro o clave no provisionada) se usa el valor que resolvi\u00f3.",
+              "to": "// in plaintext or key not provisioned) the resolved value is used."
+            },
+            {
+              "from": "// Buscar primero en estudiante_huellas (multi-dedo); si est\u00e1, el",
+              "to": "// Look in estudiante_huellas first (multi-finger); if present, the"
+            },
+            {
+              "from": "// documento (ya seudonimizado) resuelve el estudiante sin re-derivar.",
+              "to": "// document (already pseudonymized) resolves the student without re-deriving."
+            },
+            {
+              "from": "// Eliminar tambi\u00e9n las huellas multi-dedo (mismo caller, misma unidad l\u00f3gica)",
+              "to": "// Also delete the multi-finger prints (same caller, same logical unit)"
+            },
+            {
+              "from": "// Mismo cifrado que estudiantes.template_huella: IV aleatorio + base64",
+              "to": "// Same encryption as estudiantes.template_huella: random IV + base64"
+            },
+            {
+              "from": "// Fallback legacy: estudiantes.huella_id poblado cuenta como dedo 1",
+              "to": "// Legacy fallback: populated estudiantes.huella_id counts as finger 1"
+            },
+            {
+              "from": "// Legacy: incluir estudiantes.huella_id si no est\u00e1 ya en la lista",
+              "to": "// Legacy: include estudiantes.huella_id if not already in the list"
+            },
+            {
+              "from": "// huella_id es global \u2014 el m\u00e1ximo debe cubrir ambas tablas",
+              "to": "// huella_id is global \u2014 the maximum must cover both tables"
+            },
+            {
+              "from": "// Documento del estudiante cifrado en reposo en la cola de sync.",
+              "to": "// Student document encrypted at rest in the sync queue."
+            },
+            {
+              "from": "// (getPendingAudits lo descifra antes de resolver el estudiante).",
+              "to": "// (getPendingAudits decrypts it before resolving the student)."
+            },
+            {
+              "from": "// El tipo de evento tambi\u00e9n queda cifrado en reposo",
+              "to": "// The event type is also encrypted at rest"
+            },
+            {
+              "from": "// strftime('%s', fecha) convierte la fecha original a Timestamp UNIX",
+              "to": "// strftime('%s', fecha) converts the original date to a UNIX Timestamp"
+            },
+            {
+              "from": "// Con documento y event cifrados (IV aleatorio) no existe",
+              "to": "// With document and event encrypted (random IV) there is no"
+            },
+            {
+              "from": "// igualdad directa en SQL \u2014 se comparan los pendientes ya descifrados.",
+              "to": "// direct SQL equality \u2014 decrypted pending items are compared instead."
+            },
+            {
+              "from": "// Purgar registros antiguos de audit_trail para evitar llenar la SD card.",
+              "to": "// Purge old audit_trail records to avoid filling the SD card."
+            },
+            {
+              "from": "// - synced=1 (enviados OK): borrar tras `daysSynced` d\u00edas (default 30)",
+              "to": "// - synced=1 (sent OK): delete after `daysSynced` days (default 30)"
+            },
+            {
+              "from": "// - synced=-1 (DLQ): borrar tras `daysDlq` d\u00edas (default 90, m\u00e1s conservador)",
+              "to": "// - synced=-1 (DLQ): delete after `daysDlq` days (default 90, more conservative)"
+            },
+            {
+              "from": "// Retorna el n\u00famero total de filas eliminadas.",
+              "to": "// Returns the total number of deleted rows."
+            },
+            {
+              "from": "// Borrar registros en DLQ (synced=-1) tras per\u00edodo m\u00e1s largo",
+              "to": "// Delete DLQ records (synced=-1) after a longer period"
+            },
+            {
+              "from": "// M\u00e9tricas de cola para telemetr\u00eda",
+              "to": "// Queue metrics for telemetry"
+            },
+            {
+              "from": "// Reintento de largo plazo \u2014 reactiva hasta `limit` registros de la DLQ.",
+              "to": "// Long-term retry \u2014 reactivates up to `limit` records from the DLQ."
+            },
+            {
+              "from": "// VACUUM para reclamar espacio f\u00edsico tras purgado",
+              "to": "// VACUUM to reclaim physical space after purging"
+            },
+            {
+              "from": "// VACUUM no puede ejecutarse dentro de transacci\u00f3n",
+              "to": "// VACUUM cannot run inside a transaction"
+            },
+            {
+              "from": "// \u2500\u2500 Cifrado a nivel de campo para PII en reposo \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+              "to": "// \u2500\u2500 Field-level encryption for PII at rest \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
+            },
+            {
+              "from": "// Formato: \"enc:v1:\" + base64(IV|ct|tag) (mismo esquema que template_huella).",
+              "to": "// Format: \"enc:v1:\" + base64(IV|ct|tag) (same scheme as template_huella)."
+            },
+            {
+              "from": "// Sin clave provisionada \u2192 plaintext (modo degradado).",
+              "to": "// No provisioned key -> plaintext (degraded mode)."
+            },
+            {
+              "from": "// provisionada \u2192 plaintext (mismo degradado que encField).",
+              "to": "// provisioned -> plaintext (same degradation as encField)."
+            },
+            {
+              "from": "// Ejecuta un statement con manejo de SQLITE_LOCKED (Race Conditions)",
+              "to": "// Runs a statement with SQLITE_LOCKED handling (Race Conditions)"
+            },
+            {
+              "from": "// prepare_v3 con flag 0 (evita fuga de memoria con SQLITE_PREPARE_PERSISTENT)",
+              "to": "// prepare_v3 with flag 0 (avoids memory leak with SQLITE_PREPARE_PERSISTENT)"
+            },
+            {
+              "from": "// IV aleatorio de 12 bytes (RAND_bytes), concatenado al ciphertext en base64",
+              "to": "// Random 12-byte IV (RAND_bytes), concatenated to the ciphertext in base64"
+            },
+            {
+              "from": "// El base64 almacenado contiene IV(12) + ciphertext + tag(16); decrypt extrae el IV",
+              "to": "// The stored base64 contains IV(12) + ciphertext + tag(16); decrypt extracts the IV"
+            },
+            {
+              "from": "// El base64 almacenado contiene IV(12) + ciphertext + tag(16); decrypt extrae el IV",
+              "to": "// The stored base64 contains IV(12) + ciphertext + tag(16); decrypt extracts the IV"
+            },
+            {
+              "from": "// \u2500\u2500 Multi-huella \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+              "to": "// \u2500\u2500 Multi-fingerprint \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
+            },
+            {
+              "from": "// Borrar registros sincronizados exitosamente",
+              "to": "// Delete successfully synced records"
+            }
+          ]
+        },
+        {
+          "origin_file": "backend/edge/src/base_de_datos/encryption.cpp",
+          "line_range": [
+            1,
+            498
+          ],
+          "output_file": "encryption.cpp",
+          "language": "cpp",
+          "substitutions": [],
+          "sha256": "ad3ada621b66d211671ee6b3bb7d5873b8f855d2d42a8279fb23a017f246bf8b",
+          "normalized_sha256": "d34285c1c39571dcace0195b672bba5d4d6cb7905fd9d3140018e38a9f0d564a",
+          "comment_translations": [
+            {
+              "from": "/**\n * =============================================================================\n * encryption.cpp \u2014 Implementaci\u00f3n de criptograf\u00eda AES-256-GCM del edge.\n * =============================================================================\n * RESPONSABILIDAD:\n *   Provee cifrado/descifrado AES-256-GCM usando OpenSSL, codificaci\u00f3n base64,\n *   y persistencia/lectura de clave y token API en SQLite. Usa mlock/munlock\n *   para intentar evitar que la clave sea swappeada y OPENSSL_cleanse para\n *   limpiar la memoria al destruir.\n *\n * SECCIONES:\n *   1. Base64 helpers\n *   2. Constructor/destructor y gesti\u00f3n segura de la clave\n *   3. initialize/provision/isKeyProvisioned\n *   4. encrypt/decrypt AES-256-GCM (IV 12 bytes + tag 16 bytes)\n */",
+              "to": "/**\n * =============================================================================\n * encryption.cpp \u2014 AES-256-GCM cryptography implementation for the edge.\n * =============================================================================\n * RESPONSIBILITY:\n *   Provides AES-256-GCM encrypt/decrypt using OpenSSL, base64 encoding,\n *   and persistence/loading of the API key and token in SQLite. Uses\n *   mlock/munlock to keep the key out of swap where possible and\n *   OPENSSL_cleanse to wipe memory on destruction.\n *\n * SECTIONS:\n *   1. Base64 helpers\n *   2. Constructor/destructor and secure key handling\n *   3. initialize/provision/isKeyProvisioned\n *   4. encrypt/decrypt AES-256-GCM (12-byte IV + 16-byte tag)\n */"
+            },
+            {
+              "from": "// Cifrar la clave antes de guardarla en disco (binding a hardware)",
+              "to": "// Encrypt the key before storing it on disk (hardware binding)"
+            },
+            {
+              "from": "// Sin hardware ID: fail-closed, salvo opt-in expl\u00edcito de simulador/dev.",
+              "to": "// No hardware ID: fail-closed, except for explicit simulator/dev opt-in."
+            },
+            {
+              "from": "// Escritura at\u00f3mica: temp -> chmod -> rename, para evitar archivo truncado por apag\u00f3n.",
+              "to": "// Atomic write: temp -> chmod -> rename, to avoid a truncated file on power loss."
+            },
+            {
+              "from": "// Si el tama\u00f1o no es 32, probablemente est\u00e1 cifrado pero no podemos descifrar",
+              "to": "// If the size is not 32, it is probably encrypted but we cannot decrypt it"
+            },
+            {
+              "from": "// (ej: SD card movida a otra RPi) \u2014 eso es esperado y seguro",
+              "to": "// (e.g. SD card moved to another RPi) \u2014 that is expected and safe"
+            },
+            {
+              "from": "// Deriva una clave de cifrado del CPU serial de la RPi (/proc/cpuinfo).",
+              "to": "// Derives an encryption key from the RPi CPU serial (/proc/cpuinfo)."
+            },
+            {
+              "from": "// Esto significa que si extraen la SD card y la ponen en otra RPi, no pueden",
+              "to": "// This means that if they extract the SD card and put it in another RPi, they cannot"
+            },
+            {
+              "from": "// descifrar la clave AES. No es tan seguro como un TPM, pero eleva la barra",
+              "to": "// decrypt the AES key. Not as secure as a TPM, but it raises the bar"
+            },
+            {
+              "from": "// significativamente para ataques de \"robar la SD card\".",
+              "to": "// significantly against \"steal the SD card\" attacks."
+            },
+            {
+              "from": "// Leer CPU serial y revision de /proc/cpuinfo (RPi espec\u00edfico)",
+              "to": "// Read CPU serial and revision from /proc/cpuinfo (RPi specific)"
+            },
+            {
+              "from": "// No es RPi o no se pudo leer \u2014 no se puede hacer binding",
+              "to": "// Not an RPi or could not be read \u2014 binding is not possible"
+            },
+            {
+              "from": "// Salt fijo (no necesita ser secreto, solo \u00fanico para NEXO)",
+              "to": "// Fixed salt (does not need to be secret, only unique to NEXO)"
+            },
+            {
+              "from": "// -1 para excluir el null terminator",
+              "to": "// -1 to exclude the null terminator"
+            },
+            {
+              "from": "// No es RPi o no se pudo leer CPU serial \u2014 no se puede cifrar",
+              "to": "// Not an RPi or CPU serial could not be read \u2014 cannot encrypt"
+            },
+            {
+              "from": "// Cifrar la clave AES con la clave derivada del hardware",
+              "to": "// Encrypt the AES key with the hardware-derived key"
+            },
+            {
+              "from": "// Escritura at\u00f3mica",
+              "to": "// Atomic write"
+            },
+            {
+              "from": "// No es formato cifrado",
+              "to": "// Not encrypted format"
+            },
+            {
+              "from": "// No es formato cifrado",
+              "to": "// Not encrypted format"
+            },
+            {
+              "from": "// \u2500\u2500 Hash con clave para campos-busqueda (determin\u00edstico) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+              "to": "// \u2500\u2500 Keyed hash for lookup fields (deterministic) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
+            },
+            {
+              "from": "// HMAC-SHA256 sobre \"dockey|\" + plaintext con la clave AES del dispositivo.",
+              "to": "// HMAC-SHA256 over \"dockey|\" + plaintext with the device AES key."
+            },
+            {
+              "from": "// Determin\u00edstico \u2192 sirve como PK/join sin exponer el valor real en reposo.",
+              "to": "// Deterministic -> usable as PK/join without exposing the real value at rest."
+            },
+            {
+              "from": "// Intentar cargar cifrado primero, fallback a texto plano (compatibilidad)",
+              "to": "// Try loading encrypted first, fall back to plaintext (compatibility)"
+            },
+            {
+              "from": "// Fallback: archivo en texto plano (formato legacy o no-RPi)",
+              "to": "// Fallback: plaintext file (legacy format or non-RPi)"
+            },
+            {
+              "from": "// Combinar serial + revision + salt fijo para derivar clave",
+              "to": "// Combine serial + revision + fixed salt to derive key"
+            },
+            {
+              "from": "// Derivar clave de 32 bytes con PBKDF2-SHA256",
+              "to": "// Derive 32-byte key with PBKDF2-SHA256"
+            },
+            {
+              "from": "// Magic \"NXE1\" para distinguir de archivo en texto plano",
+              "to": "// Magic \"NXE1\" to distinguish from plaintext file"
+            }
+          ]
+        },
+        {
+          "origin_file": "backend/edge/src/base_de_datos/cloud_manager.cpp",
+          "line_range": [
+            1,
+            168
+          ],
+          "output_file": "cloud_manager.cpp",
+          "language": "cpp",
+          "substitutions": [],
+          "sha256": "3e7cdd293d4e5fc1840e9342eeea7be1b817a7b81fa05b92e184d7f08f2637e1",
+          "normalized_sha256": "014381318a9a436d44884466b90ec82c5359016345090b5b0e9de446bca6bb26",
+          "comment_translations": [
+            {
+              "from": "/**\n * =============================================================================\n * cloud_manager.cpp \u2014 Implementaci\u00f3n del gestor de sincronizaci\u00f3n con la nube.\n * =============================================================================\n * RESPONSABILIDAD:\n *   Implementa CloudManager: lee la URL de la API desde env/config, cifra el\n *   payload con AES-256-GCM y lo env\u00eda por libcurl o un IHttpClient inyectado.\n *   Tambi\u00e9n implementa comandos cloud: registerStudent, registerStaff,\n *   deleteStudent, wipeInstitution, verifyInstitution, verifyGroup.\n *\n * SECCIONES:\n *   1. loadApiUrl()          \u2014 resoluci\u00f3n de NEXO_API_URL / config.json\n *   2. curlPost()            \u2014 POST real via libcurl (SSL, timeouts)\n *   3. httpClientPost()      \u2014 POST via IHttpClient (dev/tests)\n *   4. buildAuthenticatedRequest() \u2014 empaqueta JSON cifrado + inst_id + token\n *   5. syncRecord()          \u2014 env\u00eda registro de asistencia\n *   6. Comandos administrativos cloud.\n */",
+              "to": "/**\n * =============================================================================\n * cloud_manager.cpp \u2014 Cloud sync manager implementation.\n * =============================================================================\n * RESPONSIBILITY:\n *   Implements CloudManager: reads the API URL from env/config, encrypts the\n *   payload with AES-256-GCM and sends it via libcurl or an injected\n *   IHttpClient. Also implements cloud commands: registerStudent,\n *   registerStaff, deleteStudent, wipeInstitution, verifyInstitution,\n *   verifyGroup.\n *\n * SECTIONS:\n *   1. loadApiUrl()          \u2014 NEXO_API_URL / config.json resolution\n *   2. curlPost()            \u2014 real POST via libcurl (SSL, timeouts)\n *   3. httpClientPost()      \u2014 POST via IHttpClient (dev/tests)\n *   4. buildAuthenticatedRequest() \u2014 packages encrypted JSON + inst_id + token\n *   5. syncRecord()          \u2014 sends attendance record\n *   6. Cloud admin commands.\n */"
+            },
+            {
+              "from": "// El backend detecta payloads del edge por la clave 'payload' en cualquier path,",
+              "to": "// The backend detects edge payloads by the 'payload' key on any path,"
+            },
+            {
+              "from": "// pero la ra\u00edz \"/\" devuelve 405 de nginx. \"/ingest\" llega al handler de PHP.",
+              "to": "// but the root \"/\" returns 405 from nginx. \"/ingest\" reaches the PHP handler."
+            },
+            {
+              "from": "// Si ya termina en /ingest, no duplicar",
+              "to": "// If it already ends in /ingest, do not duplicate"
+            },
+            {
+              "from": "// Construir la URL de ingesta: api_url base + \"/ingest\"",
+              "to": "// Build ingest URL: base api_url + \"/ingest\""
+            }
+          ]
+        },
+        {
+          "origin_file": "backend/edge/include/hal/IDisplay.h",
+          "line_range": [
+            1,
+            18
+          ],
+          "output_file": "include/hal/IDisplay.h",
+          "language": "cpp",
+          "substitutions": [],
+          "sha256": "0ed1fb990fe510c9a41ed976b426daca552458664c52fbd0dba2d13863e645bf",
+          "normalized_sha256": "44f4acaa69d5b1cf8a66e8aa25df0d32ab1541e3b2d1ce788f082b48af4132f4",
+          "comment_translations": [
+            {
+              "from": "/**\n * =============================================================================\n * IDisplay.h \u2014 Interfaz abstracta de pantalla/visor del edge.\n * =============================================================================\n * RESPONSABILIDAD:\n *   Contrato m\u00ednimo para mostrar mensajes de dos l\u00edneas y limpiar la pantalla.\n *   Implementado por DevStubDisplay (logs) y RealOledDisplay (SSD1306 I2C).\n */",
+              "to": "/**\n * =============================================================================\n * IDisplay.h \u2014 Abstract interface for the edge display/screen.\n * =============================================================================\n * RESPONSIBILITY:\n *   Minimal contract to show two-line messages and clear the screen.\n *   Implemented by DevStubDisplay (logs) and RealOledDisplay (SSD1306 I2C).\n */"
+            }
+          ]
+        },
+        {
+          "origin_file": "backend/edge/include/hal/IHttpClient.h",
+          "line_range": [
+            1,
+            25
+          ],
+          "output_file": "include/hal/IHttpClient.h",
+          "language": "cpp",
+          "substitutions": [],
+          "sha256": "c37854e6477ce9d05401b79e52a969b689983ef4278af22d9ddecb76868f5520",
+          "normalized_sha256": "3b95667e0de92912dbde0c1c22c79e386fc998064a4527037504cfef421a5748",
+          "comment_translations": [
+            {
+              "from": "/**\n * =============================================================================\n * IHttpClient.h \u2014 Interfaz abstracta de cliente HTTP.\n * =============================================================================\n * RESPONSABILIDAD:\n *   Abstracci\u00f3n para realizar POST HTTP con headers personalizados. Permite\n *   reemplazar libcurl por un stub en pruebas unitarias o entornos sin red.\n *\n * IMPLEMENTACIONES:\n *   - DevStubHttpClient : responde {\"status\":\"ok\",\"stub\":true} sin salir.\n *   - CloudManager::curlPost (no implementa IHttpClient) para producci\u00f3n.\n */",
+              "to": "/**\n * =============================================================================\n * IHttpClient.h \u2014 Abstract HTTP client interface.\n * =============================================================================\n * RESPONSIBILITY:\n *   Abstraction for performing HTTP POSTs with custom headers. Allows\n *   replacing libcurl with a stub in unit tests or network-less environments.\n *\n * IMPLEMENTATIONS:\n *   - DevStubHttpClient : responds {\"status\":\"ok\",\"stub\":true} without leaving.\n *   - CloudManager::curlPost (does not implement IHttpClient).\n */"
+            }
+          ]
+        },
+        {
+          "origin_file": "backend/edge/include/hal/INotification.h",
+          "line_range": [
+            1,
+            25
+          ],
+          "output_file": "include/hal/INotification.h",
+          "language": "cpp",
+          "substitutions": [],
+          "sha256": "a6d14ed8b510e274a784521d7fba49cea56f7d01f78c9523f8609b2f0f544f6d",
+          "normalized_sha256": "f5d4478fd717b8b8221d7e10a8262b298094ec49e6ceac44759c63ff2c04be29",
+          "comment_translations": [
+            {
+              "from": "/**\n * =============================================================================\n * INotification.h \u2014 Interfaz abstracta de notificaci\u00f3n sonora/luminosa.\n * =============================================================================\n * RESPONSABILIDAD:\n *   Contrato para emitir se\u00f1ales de \u00e9xito, error o advertencia. Permite\n *   implementaciones stub o reales con GPIO/buzzer/LEDs (RealGpioManager).\n */",
+              "to": "/**\n * =============================================================================\n * INotification.h \u2014 Abstract audible/visual notification interface.\n * =============================================================================\n * RESPONSIBILITY:\n *   Contract for emitting success, error or warning signals. Allows stub\n *   implementations or real ones with GPIO/buzzer/LEDs (RealGpioManager).\n */"
+            },
+            {
+              "from": "// Patr\u00f3n luminoso/sonoro para el estado energ\u00e9tico del nodo.",
+              "to": "// Light/sound pattern for the node power state."
+            },
+            {
+              "from": "// Control de ventilaci\u00f3n activa (GPIO fan). No-op en stubs.",
+              "to": "// Active fan control (GPIO fan). No-op in stubs."
+            }
+          ]
+        },
+        {
+          "origin_file": "backend/edge/include/hardware/dev_stub/DevStubBiometricSensor.h",
+          "line_range": [
+            1,
+            29
+          ],
+          "output_file": "include/hardware/dev_stub/DevStubBiometricSensor.h",
+          "language": "cpp",
+          "substitutions": [],
+          "sha256": "e9610b0a9579938beef9cd81ab558b992e8d6309b7660ddbd51d157c74d1068d",
+          "normalized_sha256": "453163c60fd4c4bff3f3aa3c62a03e9d02b5c580ff9fa9c9218a9f0543be9c43",
+          "comment_translations": [
+            {
+              "from": "/**\n * =============================================================================\n * DevStubBiometricSensor.h \u2014 Implementaci\u00f3n stub del sensor biom\u00e9trico.\n * =============================================================================\n * RESPONSABILIDAD:\n *   Simula un sensor biom\u00e9trico para desarrollo/pruebas sin hardware real.\n *   Inicializaci\u00f3n inmediata, enrolamiento devuelve template dummy (256 bytes\n *   0xAA), b\u00fasqueda devuelve coincidencia simulada 1 de cada 5 intentos.\n */",
+              "to": "/**\n * =============================================================================\n * DevStubBiometricSensor.h \u2014 Stub implementation of the biometric sensor.\n * =============================================================================\n * RESPONSIBILITY:\n *   Simulates a biometric sensor for development/testing without real\n *   hardware. Immediate initialization, enrollment returns a dummy template\n *   (256 bytes of 0xAA), search returns a simulated match 1 in 5 attempts.\n */"
+            }
+          ]
+        },
+        {
+          "origin_file": "backend/edge/include/hardware/dev_stub/DevStubDisplay.h",
+          "line_range": [
+            1,
+            17
+          ],
+          "output_file": "include/hardware/dev_stub/DevStubDisplay.h",
+          "language": "cpp",
+          "substitutions": [],
+          "sha256": "06d96ddcf86a8f75665e658edb8155b2aff69a60f5147b13e9b082d419ce8c86",
+          "normalized_sha256": "7cf7bef4a8b790989241185366c77573752ffcfb4a50e2b7e10200ce046ee90f",
+          "comment_translations": [
+            {
+              "from": "/**\n * =============================================================================\n * DevStubDisplay.h \u2014 Implementaci\u00f3n stub de pantalla.\n * =============================================================================\n * RESPONSABILIDAD:\n *   Implementaci\u00f3n de IDisplay que redirige mensajes al logger en lugar de\n *   actualizar hardware real. \u00datil para pruebas en m\u00e1quinas sin OLED.\n */",
+              "to": "/**\n * =============================================================================\n * DevStubDisplay.h \u2014 Stub display implementation.\n * =============================================================================\n * RESPONSIBILITY:\n *   IDisplay implementation that redirects messages to the logger instead of\n *   updating real hardware. Useful for testing on machines without OLED.\n */"
+            }
+          ]
+        },
+        {
+          "origin_file": "backend/edge/include/hardware/dev_stub/DevStubHttpClient.h",
+          "line_range": [
+            1,
+            19
+          ],
+          "output_file": "include/hardware/dev_stub/DevStubHttpClient.h",
+          "language": "cpp",
+          "substitutions": [],
+          "sha256": "4b25fc23fcb3ac1b8900b78602da951fbd7aca6b6dd1529203900b500ffd956e",
+          "normalized_sha256": "a2bb812901cf240cb7ccad94a3197649b15d60da805b4ef1a45bbbb07228ae41",
+          "comment_translations": [
+            {
+              "from": "/**\n * =============================================================================\n * DevStubHttpClient.h \u2014 Implementaci\u00f3n stub de cliente HTTP.\n * =============================================================================\n * RESPONSABILIDAD:\n *   Implementaci\u00f3n de IHttpClient que simula una respuesta HTTP exitosa sin\n *   realizar conexi\u00f3n de red. Permite testear CloudManager offline.\n */",
+              "to": "/**\n * =============================================================================\n * DevStubHttpClient.h \u2014 Stub HTTP client implementation.\n * =============================================================================\n * RESPONSIBILITY:\n *   IHttpClient implementation that simulates a successful HTTP response\n *   without any network connection. Allows testing CloudManager offline.\n */"
+            }
+          ]
+        },
+        {
+          "origin_file": "backend/edge/include/hardware/dev_stub/DevStubNotification.h",
+          "line_range": [
+            1,
+            18
+          ],
+          "output_file": "include/hardware/dev_stub/DevStubNotification.h",
+          "language": "cpp",
+          "substitutions": [],
+          "sha256": "4166f8e5f8b727b2efeb885fb1cd9879494ac05b033bb19c8b071c1e62287659",
+          "normalized_sha256": "c338cc57cd633d7310ac2de20024a09379a24345ca767cc01e381bb18b7aadbd",
+          "comment_translations": [
+            {
+              "from": "/**\n * =============================================================================\n * DevStubNotification.h \u2014 Implementaci\u00f3n stub de notificaci\u00f3n.\n * =============================================================================\n * RESPONSABILIDAD:\n *   Implementaci\u00f3n de INotification que emite logs de beep en lugar de activar\n *   GPIO, buzzer o LEDs reales. Usada en modo desarrollo.\n */",
+              "to": "/**\n * =============================================================================\n * DevStubNotification.h \u2014 Stub notification implementation.\n * =============================================================================\n * RESPONSIBILITY:\n *   INotification implementation that emits beep logs instead of driving\n *   real GPIO, buzzer or LEDs. Used in development mode.\n */"
+            }
+          ]
+        },
+        {
+          "origin_file": "backend/edge/include/utils/BiometricLockout.h",
+          "line_range": [
+            1,
+            69
+          ],
+          "output_file": "include/utils/BiometricLockout.h",
+          "language": "cpp",
+          "substitutions": [],
+          "sha256": "1dbcbc66c819ba67ca5491dc0aea313daa0c9ae383ca4d5b80b528cebed939f8",
+          "normalized_sha256": "dec5ae69bf91f970174647377981658997a3bc3dd212b36078c3488957e36be1",
+          "comment_translations": [
+            {
+              "from": "/**\n * =============================================================================\n * BiometricLockout.h \u2014 Lockout anti-spoof por software (G-2).\n * =============================================================================\n * RESPONSABILIDAD:\n *   Cuenta presentaciones de dedo rechazadas (huella capturada pero sin match \u2014\n *   NexoError::NoMatch en ambos sensores) en una ventana deslizante. Al superar\n *   el umbral impone un cooldown durante el cual el bucle de asistencia no\n *   consulta el sensor. Frena el adivinado de templates y dedos falsos sin\n *   depender del anti-spoof del hardware.\n *\n *   El reloj se inyecta por par\u00e1metro para que los tests avancen el tiempo sin\n *   sleeps. No tiene estado en disco: tras reboot el contador vuelve a cero \u2014\n *   el lockout es una defensa de ritmo, no una sanci\u00f3n persistente.\n */",
+              "to": "/**\n * =============================================================================\n * BiometricLockout.h \u2014 Software anti-spoof lockout (G-2).\n * =============================================================================\n * RESPONSIBILITY:\n *   Counts rejected finger presentations (captured print with no match \u2014\n *   NexoError::NoMatch in both sensors) over a sliding window. Past the\n *   threshold it imposes a cooldown during which the attendance loop does not\n *   query the sensor. Slows down template guessing and fake fingers without\n *   depending on hardware anti-spoof.\n *\n *   The clock is injected as a parameter so tests can advance time without\n *   sleeps. It has no on-disk state: after reboot the counter resets to zero \u2014\n *   the lockout is a pacing defense, not a persistent sanction.\n */"
+            },
+            {
+              "from": "// Registra un dedo rechazado. Devuelve true solo en el intento que cruza",
+              "to": "// Records a rejected finger. Returns true only on the attempt that crosses"
+            },
+            {
+              "from": "// el umbral (punto \u00fanico para auditar/alertar). Los rechazos durante el",
+              "to": "// the threshold (single point to audit/alert). Rejections during the"
+            },
+            {
+              "from": "// lockout no extienden ni re-disparan.",
+              "to": "// lockout neither extend nor re-trigger it."
+            },
+            {
+              "from": "// Un match v\u00e1lido resetea la ventana \u2014 el uso normal nunca acumula.",
+              "to": "// A valid match resets the window \u2014 normal use never accumulates."
+            }
+          ]
+        },
+        {
+          "origin_file": "backend/edge/include/utils/ConfigManager.h",
+          "line_range": [
+            1,
+            56
+          ],
+          "output_file": "include/utils/ConfigManager.h",
+          "language": "cpp",
+          "substitutions": [],
+          "sha256": "0d9cb365081e5ea36d7fbfa41ef0ba2af04bcb0a7aa4fd41ef331fa1343bea17",
+          "normalized_sha256": "37460f8117e9f1f266d11327ee6bbcf9d9698f959fb6016e12940e2737da6226",
+          "comment_translations": [
+            {
+              "from": "/**\n * =============================================================================\n * ConfigManager.h \u2014 Singleton de configuraci\u00f3n JSON del edge.\n * =============================================================================\n * RESPONSABILIDAD:\n *   Carga config.json (por defecto) y provee acceso tipado a valores de\n *   configuraci\u00f3n: api_url, db_path, log_path, device_id, device_token,\n *   mqtt_host, sensor_match_threshold, etc. Si un valor no existe retorna\n *   su default documentado.\n *\n * ARCHIVO POR DEFECTO:\n *   - config.json (ruta relativa al directorio de ejecuci\u00f3n)\n *   - /opt/nexo/config.json para despliegues en RPi\n */",
+              "to": "/**\n * =============================================================================\n * ConfigManager.h \u2014 Edge JSON configuration singleton.\n * =============================================================================\n * RESPONSIBILITY:\n *   Loads config.json (by default) and provides typed access to config\n *   values: api_url, db_path, log_path, device_id, device_token, mqtt_host,\n *   sensor_match_threshold, etc. Missing values return their documented default.\n *\n * DEFAULT FILE:\n *   - config.json (relative to the working directory)\n *   - /opt/nexo/config.json for RPi deployments\n */"
+            },
+            {
+              "from": "// Persistir config actualizada en disco (para auto-update de device_id)",
+              "to": "// Persist updated config to disk (for device_id auto-update)"
+            },
+            {
+              "from": "// Actualizar un valor en memoria y opcionalmente persistirlo",
+              "to": "// Update a value in memory and optionally persist it"
+            },
+            {
+              "from": "// path para saveConfig",
+              "to": "// path for saveConfig"
+            }
+          ]
+        },
+        {
+          "origin_file": "backend/edge/include/utils/Logger.h",
+          "line_range": [
+            1,
+            56
+          ],
+          "output_file": "include/utils/Logger.h",
+          "language": "cpp",
+          "substitutions": [],
+          "sha256": "2e16e36cd0e2058d81503f79b78593c601cc1edc2e3326405c39623d5ad494bf",
+          "normalized_sha256": "a5d7ddbeb6935352e165cc429082b10f14f563534f8d4786e4effd1149747baf",
+          "comment_translations": [
+            {
+              "from": "/**\n * =============================================================================\n * Logger.h \u2014 Inicializaci\u00f3n del logger del edge usando spdlog.\n * =============================================================================\n * RESPONSABILIDAD:\n *   Configura el logger por defecto de spdlog con salida a consola (color) y\n *   archivo rotativo (5 MB x 3 archivos). Soporta niveles trace/debug/info/\n *   warn/error. Los macros LOG_* verifican que el logger est\u00e9 inicializado.\n */",
+              "to": "/**\n * =============================================================================\n * Logger.h \u2014 Edge logger initialization using spdlog.\n * =============================================================================\n * RESPONSIBILITY:\n *   Configures the default spdlog logger with console (color) and rotating\n *   file output (5 MB x 3 files). Supports trace/debug/info/warn/error levels.\n *   The LOG_* macros check that the logger is initialized.\n */"
+            }
+          ]
+        },
+        {
+          "origin_file": "backend/edge/include/utils/NexoResult.h",
+          "line_range": [
+            1,
+            80
+          ],
+          "output_file": "include/utils/NexoResult.h",
+          "language": "cpp",
+          "substitutions": [],
+          "sha256": "b12c575dc47c9e19ba2d860dca0b8b745a51c7ba7efd146e30365af8b515a0a5",
+          "normalized_sha256": "02d7b1ea79766ab638c20e73dd0e6a9affec325a5ea231525471c71edc65abc3",
+          "comment_translations": [
+            {
+              "from": "/**\n * =============================================================================\n * NexoResult.h \u2014 Monada de resultado y enumeraci\u00f3n de errores del edge.\n * =============================================================================\n * RESPONSABILIDAD:\n *   Define NexoError (errores t\u00edpicos del edge) y la plantilla NexoResult<T>\n *   que encapsula un valor opcional, un c\u00f3digo de error y un mensaje. Soporta\n *   el especializado NexoResult<void> para operaciones sin retorno de dato.\n */",
+              "to": "/**\n * =============================================================================\n * NexoResult.h \u2014 Edge result monad and error enumeration.\n * =============================================================================\n * RESPONSIBILITY:\n *   Defines NexoError (typical edge errors) and the NexoResult<T> template\n *   wrapping an optional value, an error code and a message. Includes the\n *   NexoResult<void> specialization for operations with no return value.\n */"
+            },
+            {
+              "from": "// Captura cancelada por cancelCapture()",
+              "to": "// Capture cancelled by cancelCapture()"
+            }
+          ]
+        },
+        {
+          "origin_file": "backend/edge/include/base_de_datos/cloud_manager.h",
+          "line_range": [
+            1,
+            75
+          ],
+          "output_file": "include/base_de_datos/cloud_manager.h",
+          "language": "cpp",
+          "substitutions": [],
+          "sha256": "5e01cdb63fe260dbbb36886360f0155c33e4a9f5fe077fa22d9e1fa6c90ba4e8",
+          "normalized_sha256": "2807c4e744db27cedc702d3601f7a8536f584bec233b7011764aa96a9442d3d4",
+          "comment_translations": [
+            {
+              "from": "/**\n * =============================================================================\n * cloud_manager.h \u2014 Interfaz del gestor de sincronizaci\u00f3n con la nube (CloudManager).\n * =============================================================================\n * RESPONSABILIDAD:\n *   Interfaz singleton para sincronizar registros de asistencia y ejecutar\n *   comandos cloud (registro/eliminaci\u00f3n de estudiantes/personal, wipe,\n *   verificaci\u00f3n de instituciones/grupos). Construye requests autenticados\n *   cifrando el JSON de payload con AES-256-GCM y envi\u00e1ndolo v\u00eda libcurl\n *   (o un IHttpClient inyectado para testing).\n *\n * FLUJO T\u00cdPICO (syncRecord):\n *   syncRecord(jsonData)\n *        \u2502\n *        \u25bc\n *   buildAuthenticatedRequest(jsonData, instId)\n *        \u2502  \u251c\u2500 Cifra payload con Encryption (AES-256-GCM)\n *        \u2502  \u2514\u2500 A\u00f1ade inst_id, token opcional, payload base64\n *        \u25bc\n *   curlPost / httpClientPost(m_httpClient)\n *        \u2502  \u251c\u2500 Headers: Content-Type, User-Agent, X-NEXO-TOKEN\n *        \u2502  \u2514\u2500 Verifica HTTP 200 o 202\n *        \u25bc\n *   retorna ok/fail\n *\n * DEPENDENCIAS:\n *   - base_de_datos/encryption.h  : AES-256-GCM y token.\n *   - hal/IHttpClient.h           : abstracci\u00f3n HTTP para dev stubs/tests.\n *   - libcurl                     : transporte real en Linux/RPi4.\n *\n * CONFIGURACI\u00d3N:\n *   - NEXO_API_URL (env) o /opt/nexo/config.json api_url.\n *   - m_instId seteado desde setInstitutionId().\n */",
+              "to": "/**\n * =============================================================================\n * cloud_manager.h \u2014 Cloud sync manager interface (CloudManager).\n * =============================================================================\n * RESPONSIBILITY:\n *   Singleton interface to sync attendance records and run cloud commands\n *   (register/delete students/staff, wipe, verify institutions/groups).\n *   Builds authenticated requests by encrypting the payload JSON with\n *   AES-256-GCM and sending it via libcurl (or an injected IHttpClient\n *   for testing).\n *\n * TYPICAL FLOW (syncRecord):\n *   syncRecord(jsonData)\n *        \u2502\n *        \u25bc\n *   buildAuthenticatedRequest(jsonData, instId)\n *        \u2502  \u251c\u2500 Encrypts payload with Encryption (AES-256-GCM)\n *        \u2502  \u2514\u2500 Adds inst_id, optional token, base64 payload\n *        \u25bc\n *   curlPost / httpClientPost(m_httpClient)\n *        \u2502  \u251c\u2500 Headers: Content-Type, User-Agent, X-NEXO-TOKEN\n *        \u2502  \u2514\u2500 Checks HTTP 200 or 202\n *        \u25bc\n *   returns ok/fail\n *\n * DEPENDENCIES:\n *   - base_de_datos/encryption.h  : AES-256-GCM and token.\n *   - hal/IHttpClient.h           : HTTP abstraction for dev stubs/tests.\n *   - libcurl                     : real transport on Linux/RPi4.\n *\n * CONFIGURATION:\n *   - NEXO_API_URL (env) or /opt/nexo/config.json api_url.\n *   - m_instId set via setInstitutionId().\n */"
+            }
+          ]
+        },
+        {
+          "origin_file": "backend/edge/include/base_de_datos/encryption.h",
+          "line_range": [
+            1,
+            74
+          ],
+          "output_file": "include/base_de_datos/encryption.h",
+          "language": "cpp",
+          "substitutions": [],
+          "sha256": "70fea11d60b38abe77dcc943d2bd32d0e6ca4d36397c07c2ff76948e30af7d40",
+          "normalized_sha256": "6092a80a78634ef5cb06fff4328d22b39aee3e22c05016809aaf2abb240a5c8d",
+          "comment_translations": [
+            {
+              "from": "/**\n * =============================================================================\n * encryption.h \u2014 Interfaz singleton de criptograf\u00eda del edge.\n * =============================================================================\n * RESPONSABILIDAD:\n *   Provee operaciones AES-256-GCM y gesti\u00f3n de clave/token API en un singleton.\n *   Al inicializarse, recupera la clave AES de un archivo protegido (no de la\n *   base de datos local) y el token API de SQLite; al provisionarlas, las persiste\n *   en esos mismos lugares. La clave se mantiene en memoria con mlock() cuando\n *   es posible y se limpia con OPENSSL_cleanse.\n *\n * FLUJO DE CIFRADO:\n *   plaintext + IV(12 aleatorio)\n *        \u2502\n *        \u25bc\n *   AES-256-GCM -> ciphertext + tag(16)\n *        \u2502\n *        \u25bc\n *   packed = IV + ciphertext + tag  -> base64Encode\n *\n * DEPENDENCIAS:\n *   - OpenSSL (EVP_aes_256_gcm, RAND_bytes, BIO base64, mlock/munlock).\n *   - base_de_datos/sqlite_manager.h (para initialize()).\n */",
+              "to": "/**\n * =============================================================================\n * encryption.h \u2014 Edge cryptography singleton interface.\n * =============================================================================\n * RESPONSIBILITY:\n *   Provides AES-256-GCM operations and API key/token management in a\n *   singleton. On initialization it recovers the AES key from a protected\n *   file (not the local database) and the API token from SQLite; when\n *   provisioning them it persists them in those same places. The key is\n *   kept in memory with mlock() when possible and wiped with\n *   OPENSSL_cleanse.\n *\n * ENCRYPTION FLOW:\n *   plaintext + IV(12 random)\n *        \u2502\n *        \u25bc\n *   AES-256-GCM -> ciphertext + tag(16)\n *        \u2502\n *        \u25bc\n *   packed = IV + ciphertext + tag  -> base64Encode\n *\n * DEPENDENCIES:\n *   - OpenSSL (EVP_aes_256_gcm, RAND_bytes, BIO base64, mlock/munlock).\n *   - base_de_datos/sqlite_manager.h (for initialize()).\n */"
+            },
+            {
+              "from": "// Hash con clave (HMAC-SHA256 hex, determin\u00edstico) para campos que",
+              "to": "// Keyed hash (HMAC-SHA256 hex, deterministic) for fields used"
+            },
+            {
+              "from": "// sirven como clave de b\u00fasqueda (p.ej. documento). Devuelve \"\" si no hay",
+              "to": "// as lookup keys (e.g. document). Returns \"\" when unavailable"
+            },
+            {
+              "from": "// Binding a hardware \u2014 cifrar clave AES en disco con clave derivada del CPU serial",
+              "to": "// Hardware binding \u2014 encrypt the AES key on disk with a CPU-serial-derived key"
+            },
+            {
+              "from": "// clave provisionada \u2014 el llamador decide el degradado.",
+              "to": "// provisioned key \u2014 the caller decides the degradation."
+            }
+          ]
+        },
+        {
+          "origin_file": "backend/edge/include/base_de_datos/sqlite_manager.h",
+          "line_range": [
+            1,
+            117
+          ],
+          "output_file": "include/base_de_datos/sqlite_manager.h",
+          "language": "cpp",
+          "substitutions": [],
+          "sha256": "6e8aa67ee10b2f9a2e8a2a43db14065049152160d314cafb0637e1721b3be960",
+          "normalized_sha256": "3aac6f89ab8fe270657a094bf6824bfcb24bdfcda0bd36a902d2a6cfa6bffd37",
+          "comment_translations": [
+            {
+              "from": "// Multi-huella (hasta 2 dedos por estudiante)",
+              "to": "// Multi-fingerprint (up to 2 fingers per student)"
+            },
+            {
+              "from": "// Purgar registros antiguos sincronizados o en DLQ para evitar llenar la SD card",
+              "to": "// Purge old synced or DLQ records to avoid filling the SD card"
+            },
+            {
+              "from": "// M\u00e9tricas de cola para telemetr\u00eda",
+              "to": "// Queue metrics for telemetry"
+            },
+            {
+              "from": "// Requeue de largo plazo \u2014 reactiva registros synced=-1 (SyncWorker, ~1h)",
+              "to": "// Long-term requeue \u2014 reactivates synced=-1 records (SyncWorker, ~1h)"
+            },
+            {
+              "from": "// VACUUM para reclamar espacio f\u00edsico tras purgado",
+              "to": "// VACUUM to reclaim physical space after purging"
+            },
+            {
+              "from": "// Multi-tenancy: identificador de colegio",
+              "to": "// Multi-tenancy: school identifier"
+            },
+            {
+              "from": "// Migraciones para bases de datos existentes",
+              "to": "// Migrations for existing databases"
+            },
+            {
+              "from": "*   - estudiantes: documento (PK), nombre, tel/nombre acudiente, huella_id,",
+              "to": "*   - estudiantes: documento (PK), nombre, phone/guardian name, huella_id,"
+            },
+            {
+              "from": "* RESPONSABILIDAD:",
+              "to": "* RESPONSIBILITY:"
+            },
+            {
+              "from": "*   Mantiene el almacenamiento local del dispositivo edge: estudiantes,\n *   patrones de asistencia, inasistencias (legacy), audit_trail para env\u00edos\n *   pendientes y tabla config (clave/valor). Todos los templates de huella\n *   se cifran con Encryption antes de guardarse y se descifran al leerse.",
+              "to": "*   Holds the edge device local storage: students, attendance patterns,\n *   absences (legacy), audit_trail for pending uploads and a config\n *   (key/value) table. All fingerprint templates are encrypted with\n *   Encryption before being stored and decrypted when read."
+            },
+            {
+              "from": "* TABLAS:",
+              "to": "* TABLES:"
+            },
+            {
+              "from": "*   - patrones: resumen de ingresos tempranos/tardes por estudiante.",
+              "to": "*   - patrones: early/late arrival summary per student."
+            },
+            {
+              "from": "*   - inasistencias: legacy (no implementado en cpp).",
+              "to": "*   - inasistencias: legacy (not implemented in cpp)."
+            },
+            {
+              "from": "*   - audit_trail: eventos locales pendientes de sincronizar con la nube.",
+              "to": "*   - audit_trail: local events pending sync to the cloud."
+            },
+            {
+              "from": "*   - config: pares clave/valor (AES key, token, etc.).",
+              "to": "*   - config: key/value pairs (AES key, token, etc.)."
+            },
+            {
+              "from": "*     template_huella (base64 cifrado).",
+              "to": "*     template_huella (base64 encrypted)."
+            }
+          ]
+        },
+        {
+          "origin_file": "backend/edge/src/utils/ConfigManager.cpp",
+          "line_range": [
+            1,
+            106
+          ],
+          "output_file": "utils/ConfigManager.cpp",
+          "language": "cpp",
+          "substitutions": [],
+          "sha256": "58b73f6b669ef62ae7a332ab8e8591768f77518f69c1b57a45e81b2c8fcfb795",
+          "normalized_sha256": "c8a91d86e9fd894fba9e83f3058f53dc784b76c2c55d88b56194bba66b604646",
+          "comment_translations": [
+            {
+              "from": "/**\n * =============================================================================\n * ConfigManager.cpp \u2014 Implementaci\u00f3n del singleton de configuraci\u00f3n JSON.\n * =============================================================================\n * RESPONSABILIDAD:\n *   Carga config.json desde disco (con fallback a valores default) y provee\n *   getters tipados (string, int, bool). Si el archivo no existe o es inv\u00e1lido\n *   se devuelven defaults y se loguea advertencia.\n */",
+              "to": "/**\n * =============================================================================\n * ConfigManager.cpp \u2014 JSON configuration singleton implementation.\n * =============================================================================\n * RESPONSIBILITY:\n *   Loads config.json from disk (with fallback to default values) and\n *   provides typed getters (string, int, bool). If the file is missing or\n *   invalid, defaults are returned and a warning is logged.\n */"
+            },
+            {
+              "from": "// Persistir config en disco (escritura at\u00f3mica temp->rename)",
+              "to": "// Persist config to disk (atomic write temp->rename)"
+            },
+            {
+              "from": "// Valida formato UUID v4 (lo que la API espera)",
+              "to": "// Validates UUID v4 format (what the API expects)"
+            },
+            {
+              "from": "// Regex UUID v4: 8-4-4-4-12 hex, versi\u00f3n 4, variante 8/9/a/b",
+              "to": "// UUID v4 regex: 8-4-4-4-12 hex, version 4, variant 8/9/a/b"
+            },
+            {
+              "from": "// guardar path para saveConfig",
+              "to": "// save path for saveConfig"
+            },
+            {
+              "from": "// Actualizar un valor en memoria y opcionalmente persistirlo",
+              "to": "// Update a value in memory and optionally persist it"
+            }
+          ]
+        }
+      ]
+    },
+    "04-nodus-parser": {
+      "extracts": [
+        {
+          "origin_file": "backend/api/nexus/nexus_llm.php",
+          "line_range": [
+            1,
+            572
+          ],
+          "output_file": "nexus_llm.php",
+          "language": "php",
+          "substitutions": [],
+          "sha256": "12037c5df6b05a86ac52370dc849052e2386148421f2dd30c932e99127993a92",
+          "normalized_sha256": "c8737f49d5de8cdc2709372e2c0323abc53514ca456fe398bb365b09ae02cba5",
+          "comment_translations": [
+            {
+              "from": "/**\n * =============================================================================\n * nexus/nexus_llm.php \u2014 Parser sem\u00e1ntico LLM (API compatible-OpenAI).\n * =============================================================================\n *\n * El LLM NO responde al usuario ni toca la BD: traduce texto libre \u2192 intent de\n * la taxonom\u00eda + entidades. La salida entra al pipeline de intents (DSM \u2192 SCP \u2192\n * planner \u2192 RBAC \u2192 SQL read-only), as\u00ed que un parseo errado nunca puede\n * escribir ni saltarse autorizaci\u00f3n.\n *\n * Proveedor agn\u00f3stico v\u00eda env:\n *   NLU_LLM_URL    base URL OpenAI-compatible (default https://api.groq.com/openai/v1)\n *   NLU_LLM_KEY    API key (vac\u00edo \u21d2 LLM deshabilitado)\n *   NLU_LLM_MODEL  modelo (default qwen/qwen3.8-27b \u2014 Groq free 1k req/d\u00eda,\n *                  8k tokens/min; alternativas en la cuenta: openai/gpt-oss-20b,\n *                  openai/gpt-oss-120b)\n *   NLU_LLM_MODE   off | on  ('primary'/'fallback' se aceptan como 'on' por\n *                  compatibilidad de env)\n *   NLU_LLM_TIMEOUT_MS  (default 6000)\n *   NLU_LLM_REASONING_EFFORT  opcional \u2014 \u00abnone\u00bb apaga el razonamiento de\n *                  modelos qwen3; vac\u00edo = no se env\u00eda\n */",
+              "to": "/**\n * =============================================================================\n * nexus/nexus_llm.php \u2014 Semantic LLM parser (OpenAI-compatible API).\n * =============================================================================\n *\n * The LLM does NOT reply to the user or touch the DB: it translates free text\n * into a taxonomy intent + entities. The output enters the intent pipeline\n * (DSM -> SCP -> planner -> RBAC -> read-only SQL), so a wrong parse can never\n * write or bypass authorization.\n *\n * Provider-agnostic via env:\n *   NLU_LLM_URL    OpenAI-compatible base URL (default https://api.groq.com/openai/v1)\n *   NLU_LLM_KEY    API key (empty => LLM disabled)\n *   NLU_LLM_MODEL  model (default qwen/qwen3.8-27b \u2014 Groq free 1k req/day,\n *                  8k tokens/min; alternatives on the account:\n *                  openai/gpt-oss-20b, openai/gpt-oss-120b)\n *   NLU_LLM_MODE   off | on  ('primary'/'fallback' accepted as 'on' for\n *                  env compatibility)\n *   NLU_LLM_TIMEOUT_MS  (default 6000)\n *   NLU_LLM_REASONING_EFFORT  optional \u2014 \"none\" disables reasoning on\n *                  qwen3 models; empty = not sent\n */"
+            },
+            {
+              "from": "// GROQ_MODEL aceptado como alias \u2014 evita el fallo silencioso de",
+              "to": "// GROQ_MODEL accepted as alias \u2014 avoids the silent failure of"
+            },
+            {
+              "from": "// configurar el nombre del proveedor en Render y no verlo aplicado",
+              "to": "// setting the provider name on Render and not seeing it applied"
+            },
+            {
+              "from": "/* ============================================================================\n * Transporte compartido \u2014 presupuesto de cuota.\n * ----------------------------------------------------------------------------\n * Groq free: 8.000 tokens/min y 1.000 req/d\u00eda POR CLAVE (compartida por todos\n * los usuarios de la instituci\u00f3n). Un 429 no se reintenta a ciegas: se\n * espera el Retry-After solo si es corto (parser) y se abre un cooldown en\n * Redis para que los turnos siguientes vayan directo al respaldo\n * determinista en vez de chocar otra vez contra el l\u00edmite.\n * ========================================================================== */",
+              "to": "/* ============================================================================\n * Shared transport \u2014 quota budget.\n * ----------------------------------------------------------------------------\n * Groq free: 8,000 tokens/min and 1,000 req/day PER KEY (shared by all users\n * of the institution). A 429 is not retried blindly: we wait for Retry-After\n * only when it is short (parser) and open a Redis cooldown so subsequent\n * turns go straight to the deterministic fallback instead of hitting the\n * limit again.\n * ========================================================================== */"
+            },
+            {
+              "from": "/** \u00daltima falla del proveedor \u2014 diagn\u00f3stico en traza (sin datos sensibles). */",
+              "to": "/** Last provider failure \u2014 trace diagnostics (no sensitive data). */"
+            },
+            {
+              "from": "/**\n * POST /chat/completions \u2192 arreglo decodificado o null.\n * $retry429: un reintento si el proveedor pide esperar \u2264 2.5 s.\n */",
+              "to": "/**\n * POST /chat/completions -> decoded array or null.\n * $retry429: one retry if the provider asks to wait <= 2.5 s.\n */"
+            },
+            {
+              "from": "// presupuesto por request: si el parser ya consumi\u00f3 40 s, el composer",
+              "to": "// per-request budget: if the parser already consumed 40 s, the composer"
+            },
+            {
+              "from": "// no puede pedir otros 55 \u2014 nginx cortar\u00eda el request entero (respuesta",
+              "to": "// cannot ask for another 55 \u2014 nginx would cut the whole request (empty"
+            },
+            {
+              "from": "// vac\u00eda). El excedente se degrada a plantilla determinista.",
+              "to": "// response). The excess degrades to a deterministic template."
+            },
+            {
+              "from": "/* Taxonom\u00eda de intents del chat \u2014 whitelist que valida la salida del LLM. */",
+              "to": "/* Chat intent taxonomy \u2014 whitelist that validates LLM output. */"
+            },
+            {
+              "from": "/* ============================================================================\n * LLM #2 \u2014 RESPONSE COMPOSER\n * ----------------------------------------------------------------------------\n * Reescribe el reply determinista (verdad verificada por NEXO) en espa\u00f1ol\n * natural. NUNCA genera datos: solo reformula `verified_reply`. Las tarjetas,\n * filas y n\u00fameros las renderiza el pipeline \u2014 el modelo no las toca.\n *\n * Config: NLU_LLM_COMPOSE = off | data | all\n *   off  \u2192 composer deshabilitado (0 cuota)\n *   data \u2192 solo intents operativos + clarify (smalltalk ya suena natural)\n *   all  \u2192 cualquier reply\n * ========================================================================== */",
+              "to": "/* ============================================================================\n * LLM #2 \u2014 RESPONSE COMPOSER\n * ----------------------------------------------------------------------------\n * Rewrites the deterministic reply (truth verified by NEXO) into natural\n * Spanish. NEVER generates data: it only reformulates `verified_reply`. The\n * cards, rows and numbers are rendered by the pipeline \u2014 the model never\n * touches them.\n *\n * Config: NLU_LLM_COMPOSE = off | data | all\n *   off  -> composer disabled (0 quota)\n *   data -> only operational intents + clarify (smalltalk already sounds natural)\n *   all  -> any reply\n * ========================================================================== */"
+            },
+            {
+              "from": "// menores) al proveedor LLM es decisi\u00f3n expl\u00edcita, no impl\u00edcita. Quien",
+              "to": "// minors) to the LLM provider is an explicit decision, not implicit. Whoever"
+            },
+            {
+              "from": "/** Hechos visibles para el composer: lo que el usuario ve en la card. */",
+              "to": "/** Facts visible to the composer: what the user sees in the card. */"
+            },
+            {
+              "from": "// SEC-4: los datos de menores no salen del per\u00edmetro \u2014 cada",
+              "to": "// SEC-4: minors data never leaves the perimeter \u2014 each"
+            },
+            {
+              "from": "// celda se clasifica por su header; PII o header desconocido",
+              "to": "// cell is classified by its header; PII or unknown header"
+            },
+            {
+              "from": "// \u2192 '\u00b7'. Los n\u00fameros/cifras pasan (la guarda los necesita).",
+              "to": "// -> '\u00b7'. Numbers/figures pass (the guard needs them)."
+            },
+            {
+              "from": "/**\n * Guarda post-generaci\u00f3n: el composer NO puede contradecir ni inflar la\n * verdad verificada. Rechaza (\u2192 reply original) si:\n *   \u00b7 aparece una cifra ausente de verified_reply/facts/pregunta,\n *   \u00b7 niega datos cuando la tabla trae filas,\n *   \u00b7 pregunta/ofrece algo sin oferta real,\n *   \u00b7 mete juicios de valor o causas inventadas.\n */",
+              "to": "/**\n * Post-generation guard: the composer may NOT contradict or inflate the\n * verified truth. Rejects (-> original reply) if:\n *   \u00b7 a figure absent from verified_reply/facts/question appears,\n *   \u00b7 it denies data when the table has rows,\n *   \u00b7 it asks/offers something with no real offer,\n *   \u00b7 it inserts value judgments or invented causes.\n */"
+            },
+            {
+              "from": "/**\n * Reformula $out['reply'] v\u00eda el composer. Devuelve el texto nuevo o null\n * (deshabilitado / no aplica / LLM ca\u00eddo / guarda rechaz\u00f3 \u2192 el caller\n * conserva el original).\n */",
+              "to": "/**\n * Reformulates $out['reply'] via the composer. Returns the new text or null\n * (disabled / not applicable / LLM down / guard rejected -> the caller\n * keeps the original).\n */"
+            },
+            {
+              "from": "// _natural = \"reply ya redactado\": en smalltalk/repair ahorra la cuota,",
+              "to": "// _natural = \"reply already drafted\": in smalltalk/repair it saves quota,"
+            },
+            {
+              "from": "// pero en intents de datos el composer S\u00cd reformula \u2014 la respuesta",
+              "to": "// but in data intents the composer DOES reformulate \u2014 the templated"
+            },
+            {
+              "from": "// plantillada es justamente lo que suena \"gen\u00e9rica\" al usuario.",
+              "to": "// answer is exactly what sounds \"generic\" to the user."
+            },
+            {
+              "from": "/** Versi\u00f3n del prompt \u2014 invalida la cach\u00e9 del parser cuando cambia. */",
+              "to": "/** Prompt version \u2014 invalidates the parser cache when it changes. */"
+            },
+            {
+              "from": "// Compacto a prop\u00f3sito (~800 tokens, medido en Groq): el validador",
+              "to": "// Compact on purpose (~800 tokens, measured on Groq): the deterministic"
+            },
+            {
+              "from": "// determinista (nxIntentVeto/nxDomainRescue/nxSlots) corrige despu\u00e9s las",
+              "to": "// validator (nxIntentVeto/nxDomainRescue/nxSlots) fixes systematic"
+            },
+            {
+              "from": "// confusiones sistem\u00e1ticas, as\u00ed que el prompt solo lleva el contrato y lo",
+              "to": "// confusions afterwards, so the prompt only carries the contract and what"
+            },
+            {
+              "from": "// que el modelo decide mejor. Mantener sincronizado con NX_LLM_FORMAL \u222a",
+              "to": "// the model decides best. Keep in sync with NX_LLM_FORMAL U"
+            },
+            {
+              "from": "// test/coverage_matrix.php exige cada intent RBAC aqu\u00ed.",
+              "to": "// test/coverage_matrix.php requires every RBAC intent here."
+            },
+            {
+              "from": "/** \u00bfEl turno depende del contexto? (no cacheable \u2014 su parseo cambia por sesi\u00f3n) */",
+              "to": "/** Does the turn depend on context? (not cacheable \u2014 its parse changes per session) */"
+            },
+            {
+              "from": "/**\n * POST {NLU_LLM_URL}/chat/completions (compatible-OpenAI) \u2192 arreglo con la\n * misma forma que espera nxDialogueResolve (intent/confidence/entities/top3),\n * o null si el proveedor no respondi\u00f3 / devolvi\u00f3 algo inv\u00e1lido.\n */",
+              "to": "/**\n * POST {NLU_LLM_URL}/chat/completions (OpenAI-compatible) -> array with the\n * same shape nxDialogueResolve expects (intent/confidence/entities/top3),\n * or null if the provider did not respond / returned something invalid.\n */"
+            },
+            {
+              "from": "// cach\u00e9 de parseos aut\u00f3nomos (sin an\u00e1fora ni nombres): \u00abc\u00f3mo va la",
+              "to": "// cache of autonomous parses (no anaphora or names): \"how is the"
+            },
+            {
+              "from": "// jornada\u00bb de 20 docentes cuesta UNA llamada al d\u00eda, no veinte",
+              "to": "// school day going\" from 20 teachers costs ONE call per day, not twenty"
+            },
+            {
+              "from": "// Contexto COMPACTO (\u00a77.4): \u00faltimos turnos + entidades activas + set",
+              "to": "// COMPACT context (\u00a77.4): last turns + active entities + active"
+            },
+            {
+              "from": "// activo. La memoria larga la sostiene el DSM server-side; mandar 40",
+              "to": "// set. Long-term memory is held server-side by the DSM; sending 40"
+            },
+            {
+              "from": "// mensajes por turno agotaba los 8K tokens/min en dos preguntas.",
+              "to": "// messages per turn exhausted the 8K tokens/min in two questions."
+            },
+            {
+              "from": "// entidades: allowlist de claves + saneamiento (el LLM es untrusted input)",
+              "to": "// entities: key allowlist + sanitizing (the LLM is untrusted input)"
+            },
+            {
+              "from": "// enums cerrados: valor fuera de dominio \u2192 se descarta, no se inventa",
+              "to": "// closed enums: value outside the domain -> discarded, not invented"
+            },
+            {
+              "from": "// fechas: ISO estricto, nunca futuras ni de hace m\u00e1s de 3 a\u00f1os \u2014 un",
+              "to": "// dates: strict ISO, never future or older than 3 years \u2014 a"
+            },
+            {
+              "from": "// modelo que no sabe qu\u00e9 d\u00eda es no puede mover el rango a 2024",
+              "to": "// model that does not know what day it is cannot move the range to 2024"
+            },
+            {
+              "from": "// group jam\u00e1s puede ser un literal de alcance (\u00abALL\u00bb, \u00abmis\u00bb, \u00abtodos\u00bb)",
+              "to": "// group can never be a scope literal (\"ALL\", \"mine\", \"all\")"
+            },
+            {
+              "from": "// student/person: el LLM a veces pega vocabulario de dominio como",
+              "to": "// student/person: the LLM sometimes pastes domain vocabulary as"
+            },
+            {
+              "from": "// nombre (\u00abstudent:\"llegadas\"\u00bb, \u00abtomas \u2026 fechas\u00bb). Se recortan los",
+              "to": "// a name (\"student:'arrivals'\", \"you take ... dates\"). Trailing"
+            },
+            {
+              "from": "// stopwords de cola y se descarta si no queda nombre real.",
+              "to": "// stopwords are trimmed and it is discarded if no real name remains."
+            },
+            {
+              "from": "// solo parseos aut\u00f3nomos, seguros y sin fechas absolutas/nombres",
+              "to": "// only autonomous, safe parses and no absolute dates/names"
+            },
+            {
+              "from": "// (los rangos relativos los recalcula nxSlots cada d\u00eda)",
+              "to": "// (relative ranges are recomputed by nxSlots every day)"
+            },
+            {
+              "from": "/* ============================================================================\n * LLM #3 \u2014 CHAT INFORMAL (conversaci\u00f3n libre)\n * ----------------------------------------------------------------------------\n * Cuando el parser clasifica domain=informal, el mensaje NO necesita intents:\n * el LLM conversa con su contexto nativo (historial real de mensajes) bajo una\n * persona institucional con guardarra\u00edles duros. NUNCA inventa datos del\n * colegio: si el usuario pide datos, el parser habr\u00eda elegido intent formal.\n *\n * Config: NLU_LLM_CHAT = on | off   (default: sigue al parser)\n * ========================================================================== */",
+              "to": "/* ============================================================================\n * LLM #3 \u2014 INFORMAL CHAT (free conversation)\n * ----------------------------------------------------------------------------\n * When the parser classifies domain=informal, the message needs NO intents:\n * the LLM converses with its native context (real message history) under an\n * institutional persona with hard guardrails. It NEVER invents school data:\n * if the user asks for data, the parser would have chosen a formal intent.\n *\n * Config: NLU_LLM_CHAT = on | off   (default: follows the parser)\n * ========================================================================== */"
+            },
+            {
+              "from": "// default on si hay parser",
+              "to": "// default on when parser is present"
+            },
+            {
+              "from": "/**\n * Conversaci\u00f3n informal: env\u00eda el historial real (\u00faltimos turnos user/assistant)\n * como mensajes \u2014 el LLM usa su contexto nativo. Devuelve texto o null.\n * $turns: [['u'=>..,'a'=>..], ...] \u2014 ya saneados.\n */",
+              "to": "/**\n * Informal conversation: sends the real history (last user/assistant turns)\n * as messages \u2014 the LLM uses its native context. Returns text or null.\n * $turns: [['u'=>..,'a'=>..], ...] \u2014 already sanitized.\n */"
+            },
+            {
+              "from": "// la persona no se negocia: nada de ofrecer consultas ni excusas t\u00e9cnicas",
+              "to": "// the persona is non-negotiable: no offering queries or technical excuses"
+            },
+            {
+              "from": "/** SEC-4: celda segura para facts \u2192 proveedor. PII por header \u2192 '\u00b7'; cifras pasan. */",
+              "to": "/** SEC-4: safe cell for facts -> provider. PII by header -> '\u00b7'; figures pass. */"
+            },
+            {
+              "from": "// columna PII o sin header \u2192 siempre enmascarada, sin excepci\u00f3n",
+              "to": "// PII column or no header -> always masked, no exception"
+            },
+            {
+              "from": "// num\u00e9rica (un documento tambi\u00e9n son d\u00edgitos)",
+              "to": "// numeric (a document is also digits)"
+            },
+            {
+              "from": "/** Contenido JSON del mensaje del asistente (o null). */",
+              "to": "/** JSON content of the assistant message (or null). */"
+            },
+            {
+              "from": "// algunos modelos envuelven el JSON en ```json \u2026 ``` o anteponen <think>",
+              "to": "// some models wrap JSON in ```json \u2026 ``` or prepend <think>"
+            },
+            {
+              "from": "// intents derivados del modelo de datos (tabla \u00d7 interrogativa)",
+              "to": "// intents derived from the data model (table \u00d7 interrogative)"
+            },
+            {
+              "from": "// active 'data'/'all' acepta el flujo documentado en DECISIONES.md.",
+              "to": "// active 'data'/'all' accepts the flow documented in DECISIONES.md."
+            },
+            {
+              "from": "// NX_LLM_INFORMAL y la allowlist de entidades de nxLlmClassify \u2014",
+              "to": "// NX_LLM_INFORMAL and the entity allowlist of nxLlmClassify \u2014"
+            }
+          ]
+        }
+      ]
+    },
+    "05-redis-reliable-queue": {
+      "extracts": [
+        {
+          "origin_file": "backend/api/workers/worker_biometric.php",
+          "line_range": [
+            720,
+            939
+          ],
+          "output_file": "worker_biometric_queue.php",
+          "language": "php",
+          "substitutions": [],
+          "sha256": "6662ed559c0e6585c82bf24ec6c3d2ea8e787d3ebcca375e9e75419a5d8f00c0",
+          "normalized_sha256": "a9cda45f785d4836d6f350ae342937d9a191d14883d2f2ecd3df240e1f1edf76",
+          "comment_translations": [
+            {
+              "from": "// Script Lua at\u00f3mico que hace LMOVE + inyecta timestamp.",
+              "to": "// Atomic Lua script that does LMOVE + injects timestamp."
+            },
+            {
+              "from": "// Esto garantiza que, si el worker muere, el GC pueda medir cu\u00e1nto tiempo",
+              "to": "// This guarantees that, if the worker dies, the GC can measure how long"
+            },
+            {
+              "from": "// lleva el item en processing y reinsertarlo.",
+              "to": "// the item has been in processing and reinsert it."
+            },
+            {
+              "from": "// Garbage Collector \u2014 reinserta en ingest los jobs zombies",
+              "to": "// Garbage Collector \u2014 reinserts zombie jobs into ingest"
+            },
+            {
+              "from": "// (m\u00e1s de 5 minutos en processing sin commit exitoso).",
+              "to": "// (more than 5 minutes in processing without successful commit)."
+            },
+            {
+              "from": "// 1s por defecto (evita 20 polls/s en Upstash)",
+              "to": "// 1s default (avoids 20 polls/s on Upstash)"
+            },
+            {
+              "from": "// D-1: drena ingest_outbox \u2014 la API escribe el job durable en la misma tx que",
+              "to": "// D-1: drains ingest_outbox \u2014 the API writes the durable job in the same tx as"
+            },
+            {
+              "from": "// el evento cuando Redis falla; aqu\u00ed corre el pipeline completo aunque Redis",
+              "to": "// the event when Redis fails; here the full pipeline runs even if Redis"
+            },
+            {
+              "from": "// siga ca\u00eddo (PG directo). Reclama con SKIP LOCKED, procesa con processJob",
+              "to": "// remains down (direct PG). Claims with SKIP LOCKED, processes with processJob"
+            },
+            {
+              "from": "// (que maneja su propia tx) y marca DONE; PROCESSING viejo vuelve a PENDING.",
+              "to": "// (which handles its own tx) and marks DONE; old PROCESSING returns to PENDING."
+            },
+            {
+              "from": "// Reencolar reclamos huerfanos (>5 min en PROCESSING = worker muri\u00f3)",
+              "to": "// Re-queue orphaned claims (>5 min in PROCESSING = worker died)"
+            },
+            {
+              "from": "// Tras 5 intentos pasa a DLQ impl\u00edcita (FAILED queda visible)",
+              "to": "// After 5 attempts goes to implicit DLQ (FAILED remains visible)"
+            },
+            {
+              "from": "// Guard de ejecuci\u00f3n: incluir el archivo (probes/tests) no lanza el daemon.",
+              "to": "// Execution guard: including the file (probes/tests) does not launch the daemon."
+            },
+            {
+              "from": "// D-1: drenar el outbox durable cada ~15s (o en cada idle de Redis)",
+              "to": "// D-1: drain the durable outbox every ~15s (or on each Redis idle)"
+            },
+            {
+              "from": "// Logic failure: reencolar en la cola principal para reintentar (igual que excepci\u00f3n DB)",
+              "to": "// Logic failure: requeue on the main queue to retry (same as DB exception)"
+            },
+            {
+              "from": "// Heartbeat cada 30 segundos",
+              "to": "// Heartbeat every 30 seconds"
+            },
+            {
+              "from": "// GC de zombies cada 60 segundos.",
+              "to": "// Zombie GC every 60 seconds."
+            }
+          ]
+        }
+      ]
+    },
+    "06-table-partitioning": {
+      "extracts": [
+        {
+          "origin_file": "backend/api/infra/scripts/create_monthly_partition.sh",
+          "line_range": [
+            1,
+            57
+          ],
+          "output_file": "create_monthly_partition.sh",
+          "language": "sh",
+          "substitutions": [
+            {
+              "pattern": "ADMIN_DATABASE_URL/DATABASE_URL no configurada",
+              "replacement": "ADMIN_DATABASE_URL/DATABASE_URL is not configured",
+              "expected_count": 1,
+              "scope": "literal"
+            },
+            {
+              "pattern": "Partici\u00f3n ${PNAME} ya existe.",
+              "replacement": "Partition ${PNAME} already exists.",
+              "expected_count": 1,
+              "scope": "literal"
+            },
+            {
+              "pattern": "Partici\u00f3n ${PNAME} creada [${P_START}, ${P_END}).",
+              "replacement": "Partition ${PNAME} created [${P_START}, ${P_END}).",
+              "expected_count": 1,
+              "scope": "literal"
+            },
+            {
+              "pattern": "ERROR: fallo al crear ${PNAME}",
+              "replacement": "ERROR: failed to create ${PNAME}",
+              "expected_count": 1,
+              "scope": "literal"
+            }
+          ],
+          "sha256": "75c348c86eb488593eafb531031c10edfd5774bc7a46b472e6fabcf446205f84",
+          "normalized_sha256": "0895d138a87adcfdcc60c6ca1f4ede63718ac13a8edc97e424778e12ea5f3959",
+          "comment_translations": [
+            {
+              "from": "# create_monthly_partition.sh - Crea particiones mensuales para las 8 tablas",
+              "to": "# create_monthly_partition.sh - Creates monthly partitions for the 8 partitioned"
+            },
+            {
+              "from": "# particionadas de NEXO. Uso: ./create_monthly_partition.sh [YYYY-MM] [tabla]",
+              "to": "# tables of NEXO. Usage: ./create_monthly_partition.sh [YYYY-MM] [table]"
+            },
+            {
+              "from": "# Sin argumentos crea la partici\u00f3n del mes siguiente en TODAS las tablas.",
+              "to": "# Without arguments creates the next month partition in ALL tables."
+            },
+            {
+              "from": "# I-2: antes solo cubr\u00eda biometric_events \u2014 las otras 7 acumulaban todo en su",
+              "to": "# I-2: previously only covered biometric_events \u2014 the other 7 accumulated everything in their"
+            },
+            {
+              "from": "# partici\u00f3n DEFAULT (sin pruning posible y fuera del alcance de la retenci\u00f3n).",
+              "to": "# DEFAULT partition (no pruning possible and outside retention scope)."
+            },
+            {
+              "from": "# SEC-2: DDL administrativo \u2014 requiere ADMIN_DATABASE_URL (rol con DDL);",
+              "to": "# SEC-2: administrative DDL \u2014 requires ADMIN_DATABASE_URL (role with DDL);"
+            },
+            {
+              "from": "# DATABASE_URL solo en despliegues legacy de un solo rol.",
+              "to": "# DATABASE_URL only in legacy single-role deployments."
+            },
+            {
+              "from": "# tabla:columna_de_rango \u2014 las 8 padres particionados del schema",
+              "to": "# table:range_column \u2014 the 8 partitioned parents in the schema"
+            }
+          ]
+        },
+        {
+          "origin_file": "backend/api/infra/scripts/drop_old_partitions.sh",
+          "line_range": [
+            1,
+            24
+          ],
+          "output_file": "drop_old_partitions.sh",
+          "language": "sh",
+          "substitutions": [
+            {
+              "pattern": "ADMIN_DATABASE_URL/DATABASE_URL no configurada",
+              "replacement": "ADMIN_DATABASE_URL/DATABASE_URL is not configured",
+              "expected_count": 1,
+              "scope": "literal"
+            },
+            {
+              "pattern": "Retenci\u00f3n ${RETENTION} meses \u2014 particiones eliminadas: ${DROPPED}",
+              "replacement": "Retention ${RETENTION} months \u2014 partitions dropped: ${DROPPED}",
+              "expected_count": 1,
+              "scope": "literal"
+            }
+          ],
+          "sha256": "7d278564769ac2775ff914aecb564513aaa11209a687418e8caca6e47a9c6c4b",
+          "normalized_sha256": "2fa2feb95a6538f1ff5c9c2797f2532e5c69c93c66d5baa614e6d66be3663216",
+          "comment_translations": [
+            {
+              "from": "# drop_old_partitions.sh - I-2: invocador de fn_drop_old_partitions (retenci\u00f3n).",
+              "to": "# drop_old_partitions.sh - I-2: invoker of fn_drop_old_partitions (retention)."
+            },
+            {
+              "from": "# Sin este cron la funci\u00f3n exist\u00eda pero nadie la llamaba \u2014 biometric_events y",
+              "to": "# Without this cron the function existed but nobody called it \u2014 biometric_events and"
+            },
+            {
+              "from": "# auditor\u00edas crec\u00edan para siempre. Corre mensual v\u00eda crontab.",
+              "to": "# audits grew forever. Runs monthly via crontab."
+            },
+            {
+              "from": "# Retenci\u00f3n: NEXO_PARTITION_RETENTION_MONTHS (default 24).",
+              "to": "# Retention: NEXO_PARTITION_RETENTION_MONTHS (default 24)."
+            }
+          ]
+        },
+        {
+          "origin_file": "sql/schema.sql",
+          "line_range": [
+            2960,
+            3002
+          ],
+          "output_file": "fn_drop_old_partitions.sql",
+          "language": "sql",
+          "substitutions": [
+            {
+              "pattern": "-- Extraer fecha del nombre _YYYY_MM",
+              "replacement": "-- Extract date from the _YYYY_MM name suffix",
+              "expected_count": 1,
+              "scope": "literal"
+            },
+            {
+              "pattern": "-- DETACH primero (seguro), luego DROP",
+              "replacement": "-- DETACH first (safe), then DROP",
+              "expected_count": 1,
+              "scope": "literal"
+            }
+          ],
+          "sha256": "8f1ec906be6dae9c7932f7c3b876735f0ed7304f8d7c221ed398dc76d07f0582",
+          "normalized_sha256": "2308804b399f24de15c2985ea7d7b497879812c0440e355fa67f1c88fe721b3b",
+          "comment_translations": []
+        }
+      ]
+    }
+  }
+}

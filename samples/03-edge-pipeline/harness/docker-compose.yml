@@ -1,0 +1,20 @@
+# ADDED FOR THIS SAMPLE
+version: '3.8'
+
+name: nexo-s03
+services:
+  redis:
+    image: redis:7.2.4-alpine@sha256:c8bb255c3559b3e458766db810aa7b3c7af1235b204cfdb304e79ff388fe1a5a
+    container_name: nexo-s03-redis
+    ports:
+      - "16378:6379"
+
+  edge-node:
+    build:
+      context: ..
+      dockerfile: harness/Dockerfile
+    container_name: nexo-s03-edge-node
+    depends_on:
+      - redis
+    environment:
+      - NEXO_REDIS_PORT=6379

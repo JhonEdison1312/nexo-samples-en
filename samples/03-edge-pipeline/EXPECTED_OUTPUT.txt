@@ -1,0 +1,44 @@
+=== 03-EDGE-PIPELINE VERIFICATION DEMO ===
+
+--- STEP 1: Device-Bound Key Setup (Post-Fix Fail-Closed & Dev Opt-in) ---
+[TS] [error] [:] [C5] Hardware-bound encryption failed; refusing plaintext AES key file. Simulator/dev opt-in: NEXO_ALLOW_DEV_KEY_FALLBACK=1
+[TS] [error] [:] Failed to persist AES key to file
+Without opt-in flag: Hardware binding fails -> Fail-closed: YES (key rejected)
+  [PASS] fail-closed: key rejected without opt-in
+[TS] [error] [:] [C5] NEXO_ALLOW_DEV_KEY_FALLBACK=1: writing plaintext AES key file (simulator/dev only), mode 0600
+[TS] [info] [:] AES-256 key provisioned
+With NEXO_ALLOW_DEV_KEY_FALLBACK=1: Key provisioned: YES (0600 mode)
+  [PASS] opt-in: key provisioned with NEXO_ALLOW_DEV_KEY_FALLBACK=1
+
+--- STEP 2: SQLite Outbox Initialization ---
+SQLite outbox schema created: PRAGMA journal_mode=WAL; synchronous=EXTRA
+
+--- STEP 3: Offline Event Capture ---
+[TS] [info] [:] [STUB] Biometric sensor initialized (dev-stub)
+Attendance event recorded to outbox: SUCCESS
+Pending unsynced outbox records: 1
+  [PASS] biometric event persisted to outbox
+  [PASS] outbox has exactly 1 pending record
+
+--- STEP 4: Network Failure & Retry Accounting ---
+Attempting sync while server unreachable...
+Sync failed. Retry count incremented to: 1
+Record remains queued in outbox: YES
+  [PASS] retry attempt counter incremented
+
+--- STEP 5: Successful Synchronous Ingestion ---
+Payload encrypted with AES-256-GCM (IV + ciphertext + tag)
+[TS] [info] [:] [SERVER] Ingestion OK: event accepted (202 Accepted)
+Server response (First delivery): HTTP 202 (Accepted)
+  [PASS] first delivery accepted (HTTP 202)
+Outbox item marked synced. Pending unsynced records remaining: 0
+  [PASS] outbox drained after sync
+
+--- STEP 6: Replay Attack Detection ---
+Attacker re-sends the exact same encrypted packet with duplicate nonce...
+[TS] [warning] [:] [SERVER] EDGE_REPLAY_NONCE_DUPLICATE: Replay attack detected! Nonce already used: <NONCE>
+Server response (Replay packet): HTTP 403 (Nonce already used)
+  [PASS] replay packet rejected (HTTP 403)
+Replay attack successfully REJECTED by server!
+
+=== 03-EDGE-PIPELINE DEMO COMPLETE: ALL CHECKS PASSED ===
